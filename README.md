@@ -37,3 +37,27 @@ code like AlphaPose that predates torch 2.x.
 
 See `SETUP.md` for exactly what to put where, and `check_setup.py` to
 verify everything's in place before you push.
+
+## A note on ZeroGPU hardware
+
+If you're deploying this on **ZeroGPU** (the free/pay-per-call shared-GPU
+tier), be aware this pipeline's architecture doesn't fit it well: ZeroGPU
+grants GPU access only inside a function decorated with `@spaces.GPU`,
+scoped to that call *in the same Python process*. This app instead calls
+AlphaPose's and MotionBERT's own scripts as **separate subprocesses**
+(`subprocess.run(...)`) — that's what lets it reuse their unmodified,
+correct code instead of re-implementing it. Those child processes are not
+guaranteed to see the GPU ZeroGPU granted to the parent.
+
+In practice: this may fall back to CPU inside every subprocess even on a
+ZeroGPU Space, making it very slow (and possibly timing out ZeroGPU's
+per-call duration limit) without ever throwing a clear error.
+
+**Recommended:** use standard dedicated GPU hardware (T4 small/medium,
+L4, or A10G) instead of ZeroGPU for this Space. It costs by the hour
+rather than per-call, but it actually gives the subprocesses real,
+persistent GPU access. If you want to stay on ZeroGPU, the pipeline would
+need restructuring to run the AlphaPose/MotionBERT model code in-process
+(importing their Python modules directly and calling them as functions)
+rather than via subprocess — a substantially bigger rewrite than this repo
+currently does.

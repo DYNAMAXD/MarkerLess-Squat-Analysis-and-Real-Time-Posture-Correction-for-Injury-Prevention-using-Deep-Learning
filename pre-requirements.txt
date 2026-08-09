@@ -2,17 +2,21 @@
 # importable already when pip processes `-e ./AlphaPose` in requirements.txt,
 # since AlphaPose's setup.py imports torch.utils.cpp_extension at build time.
 #
-# This pin is chosen for AlphaPose compatibility (its C++ extensions predate
-# torch 2.x), NOT for ZeroGPU. Make sure your Space's hardware is a
-# dedicated GPU (T4/L4/A10G) or CPU-basic — NOT ZeroGPU, which forces its
-# own short list of supported torch builds and doesn't work with this
-# pipeline's subprocess-based architecture anyway (see README.md).
+# IMPORTANT: this pin is only relevant if you're on ZeroGPU hardware, which
+# enforces a fixed list of torch builds (2.8.0 / 2.9.1 / 2.10.0 / 2.11.0).
+# Using the oldest supported one since AlphaPose's C++ extensions are old
+# code (torch 1.x/1.11-era) — this is the best compatibility bet among the
+# allowed versions, but not a guarantee.
 #
-# If the `-e ./AlphaPose` build step in requirements.txt fails with API/ABI
-# errors on this pin, try 1.13.1 / 1.11.0 (older, closer to AlphaPose's era)
-# before reaching for Docker.
-torch==2.0.1
-torchvision==0.15.2
+# Also read the ZeroGPU note in SETUP.md before relying on this Space on
+# ZeroGPU hardware at all — this pipeline calls AlphaPose/MotionBERT as
+# separate subprocesses, and ZeroGPU's GPU grant is scoped to the exact
+# @spaces.GPU-decorated call in the SAME process, not to child processes
+# it launches. Standard GPU hardware (T4/L4/A10G) sidesteps this entirely
+# and doesn't need this specific torch pin — feel free to use a newer one
+# there if AlphaPose's build allows it.
+torch==2.8.0
+torchvision==0.23.0
 numpy<2.0
 cython
 cython_bbox
