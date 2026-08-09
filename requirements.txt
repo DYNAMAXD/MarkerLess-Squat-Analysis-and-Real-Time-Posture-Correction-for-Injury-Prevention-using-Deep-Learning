@@ -1,15 +1,12 @@
-# Installs AlphaPose FROM the local ./AlphaPose/ folder you committed to
-# this Space (see SETUP.md). `-e` (editable) makes pip run AlphaPose's
-# setup.py in place — this is what compiles its C++ extensions, replacing
-# the `python setup.py build develop` step from the Docker version.
--e ./AlphaPose
+# AlphaPose and MotionBERT are deliberately NOT installed here. Both
+# `-e ./AlphaPose` and `-r ./MotionBERT/requirements.txt` fail on HF's
+# Gradio-SDK builder: requirements.txt is installed in a layer that runs
+# BEFORE your repo's own files are copied in, so any reference to a local
+# path in this file will always 404, regardless of what you've pushed.
+# app.py installs both, once, at container startup instead — see
+# ensure_alphapose_and_motionbert_installed() in app.py.
 
-# Pulls in MotionBERT's own dependency list (pure Python, no compiled
-# extensions) from the copy you committed at ./MotionBERT/.
--r ./MotionBERT/requirements.txt
-
-# App / orchestration deps
-gradio>=4.36
+gradio         # left unpinned — ZeroGPU Spaces auto-inject their own gradio[oauth] pin
 pandas>=2.0
 opencv-python-headless>=4.8
 huggingface_hub>=0.23

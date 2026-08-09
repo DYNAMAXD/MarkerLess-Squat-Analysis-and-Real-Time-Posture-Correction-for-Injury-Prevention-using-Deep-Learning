@@ -118,6 +118,56 @@ def _run(cmd, cwd=None):
 
 
 # --------------------------------------------------------------------------
+# Runtime setup: install AlphaPose (compiles its C++ extensions) and
+# MotionBERT's dependencies HERE, not in requirements.txt.
+#
+# WHY: HF's Gradio-SDK builder installs requirements.txt in a cached layer
+# that runs BEFORE your repo's own files (AlphaPose/, MotionBERT/) are
+# copied into the container. Any `-e ./AlphaPose` or `-r ./MotionBERT/...`
+# line in requirements.txt will always fail — not because of what you
+# pushed, but because of build-layer ordering. By the time this app.py is
+# actually running, though, the repo's files genuinely exist on disk, so
+# doing the install here works. It costs a one-time delay on container
+# startup (AlphaPose's C++ build takes a minute or two) — subsequent
+# requests in the same running container skip it (see the marker file).
+# --------------------------------------------------------------------------
+_SETUP_DONE_MARKER = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".setup_done")
+
+
+def ensure_alphapose_and_motionbert_installed():
+    if os.path.exists(_SETUP_DONE_MARKER):
+        print("[app.py] AlphaPose/MotionBERT already installed this container, skipping.")
+        return
+
+    if not os.path.isdir(ALPHAPOSE_DIR):
+        raise FileNotFoundError(
+            f"{ALPHAPOSE_DIR} not found. Did you commit the AlphaPose source "
+            f"tree into this Space? See SETUP.md."
+        )
+    if not os.path.isdir(MOTIONBERT_DIR):
+        raise FileNotFoundError(
+            f"{MOTIONBERT_DIR} not found. Did you commit the MotionBERT source "
+            f"tree into this Space? See SETUP.md."
+        )
+
+    print("[app.py] Installing AlphaPose (editable, compiles C++ extensions — "
+          "this can take a minute or two on first startup)...")
+    _run([sys.executable, "-m", "pip", "install", "--no-build-isolation", "-e", ALPHAPOSE_DIR])
+
+    mb_requirements = os.path.join(MOTIONBERT_DIR, "requirements.txt")
+    if os.path.exists(mb_requirements):
+        print("[app.py] Installing MotionBERT's requirements...")
+        _run([sys.executable, "-m", "pip", "install", "-r", mb_requirements])
+    else:
+        print(f"[app.py] WARNING: {mb_requirements} not found — skipping "
+              f"(MotionBERT's scripts may fail on a missing dependency).")
+
+    with open(_SETUP_DONE_MARKER, "w") as f:
+        f.write("done\n")
+    print("[app.py] Setup complete.")
+
+
+# --------------------------------------------------------------------------
 # Optional: YOLOv11 (Ultralytics) as the person detector, instead of
 # AlphaPose's bundled YOLOv3-SPP. This avoids downloading yolov3-spp.weights
 # entirely and lets AlphaPose skip running its own detector, via its
@@ -384,6 +434,7 @@ def export_mesh_frames_as_obj(mesh_out_dir: str, obj_dir: str, stride: int = 1) 
 # --------------------------------------------------------------------------
 def run_pipeline(video_path: str, out_dir: str, do_mesh: bool = True, obj_stride: int = 1,
                   use_yolov11: bool = False):
+    ensure_alphapose_and_motionbert_installed()
     os.makedirs(out_dir, exist_ok=True)
     ap_dir = os.path.join(out_dir, "alphapose")
     mb_dir = os.path.join(out_dir, "motionbert_pose3d")

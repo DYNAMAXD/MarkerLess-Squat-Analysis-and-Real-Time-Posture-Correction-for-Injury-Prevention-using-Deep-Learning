@@ -67,9 +67,13 @@ defaults to the smaller `yolo11n.pt` — swap since you downloaded `s`).
    python check_setup.py
    ```
 8. `git add . && git commit -m "AlphaPose + MotionBERT space" && git push`
-9. Watch the Space's **Build logs** tab. The step most likely to need a
-   retry is `-e ./AlphaPose` in requirements.txt (the C++ compile) — see
-   the troubleshooting note in `pre-requirements.txt` if it fails.
+9. Watch the Space's **Build logs** tab for the requirements.txt/
+   pre-requirements.txt install (should be quick — it's just plain pip
+   packages now). Then watch the **app logs** (or "Container logs") for
+   the first request: that's when `app.py` installs AlphaPose (compiling
+   its C++ extensions) and MotionBERT's requirements, which takes a
+   minute or two the first time. If AlphaPose's compile step fails there,
+   see the troubleshooting note in `pre-requirements.txt`.
 
 ## Total size, roughly
 

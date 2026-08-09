@@ -12,10 +12,13 @@ pinned: false
 # AlphaPose + MotionBERT — Video to 3D Joints & Mesh (no-Docker build)
 
 Same pipeline as the Docker version, built as a plain Gradio SDK Space
-instead: `packages.txt` installs apt build tools, `pre-requirements.txt`
-installs torch before anything tries to compile against it, and
-`requirements.txt` installs AlphaPose in-place (`-e ./AlphaPose`, which
-compiles its C++ extensions) plus MotionBERT's own requirements.
+instead: `packages.txt` installs apt build tools and `pre-requirements.txt`
+installs torch. AlphaPose (compiling its C++ extensions) and MotionBERT's
+own requirements are deliberately installed at **app startup** rather than
+in requirements.txt — see the comment in `requirements.txt` and
+`ensure_alphapose_and_motionbert_installed()` in `app.py` for why (HF's
+builder installs requirements.txt before your repo's own files exist, so
+any local-path reference there always fails).
 
 ## ⚠️ Hardware: do NOT select ZeroGPU for this Space
 
