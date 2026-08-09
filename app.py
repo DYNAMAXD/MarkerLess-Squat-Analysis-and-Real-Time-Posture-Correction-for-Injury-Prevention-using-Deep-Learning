@@ -62,14 +62,10 @@ import numpy as np
 import pandas as pd
 
 # --------------------------------------------------------------------------
-# Configuration — override via environment variables if you need to.
-# Defaults assume the no-Docker layout: AlphaPose/ and MotionBERT/ committed
-# as subfolders of this same Space repo (see SETUP.md). If you're using the
-# Dockerfile version instead, set ALPHAPOSE_DIR=/app/AlphaPose and
-# MOTIONBERT_DIR=/app/MotionBERT via the Dockerfile's ENV instead.
+# Configuration — override via environment variables in your Dockerfile/Space
 # --------------------------------------------------------------------------
-ALPHAPOSE_DIR = os.environ.get("ALPHAPOSE_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "AlphaPose"))
-MOTIONBERT_DIR = os.environ.get("MOTIONBERT_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "MotionBERT"))
+ALPHAPOSE_DIR = os.environ.get("ALPHAPOSE_DIR", "/app/AlphaPose")
+MOTIONBERT_DIR = os.environ.get("MOTIONBERT_DIR", "/app/MotionBERT")
 
 ALPHAPOSE_CFG = os.environ.get(
     "ALPHAPOSE_CFG",
@@ -118,56 +114,6 @@ def _run(cmd, cwd=None):
 
 
 # --------------------------------------------------------------------------
-# Runtime setup: install AlphaPose (compiles its C++ extensions) and
-# MotionBERT's dependencies HERE, not in requirements.txt.
-#
-# WHY: HF's Gradio-SDK builder installs requirements.txt in a cached layer
-# that runs BEFORE your repo's own files (AlphaPose/, MotionBERT/) are
-# copied into the container. Any `-e ./AlphaPose` or `-r ./MotionBERT/...`
-# line in requirements.txt will always fail — not because of what you
-# pushed, but because of build-layer ordering. By the time this app.py is
-# actually running, though, the repo's files genuinely exist on disk, so
-# doing the install here works. It costs a one-time delay on container
-# startup (AlphaPose's C++ build takes a minute or two) — subsequent
-# requests in the same running container skip it (see the marker file).
-# --------------------------------------------------------------------------
-_SETUP_DONE_MARKER = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".setup_done")
-
-
-def ensure_alphapose_and_motionbert_installed():
-    if os.path.exists(_SETUP_DONE_MARKER):
-        print("[app.py] AlphaPose/MotionBERT already installed this container, skipping.")
-        return
-
-    if not os.path.isdir(ALPHAPOSE_DIR):
-        raise FileNotFoundError(
-            f"{ALPHAPOSE_DIR} not found. Did you commit the AlphaPose source "
-            f"tree into this Space? See SETUP.md."
-        )
-    if not os.path.isdir(MOTIONBERT_DIR):
-        raise FileNotFoundError(
-            f"{MOTIONBERT_DIR} not found. Did you commit the MotionBERT source "
-            f"tree into this Space? See SETUP.md."
-        )
-
-    print("[app.py] Installing AlphaPose (editable, compiles C++ extensions — "
-          "this can take a minute or two on first startup)...")
-    _run([sys.executable, "-m", "pip", "install", "--no-build-isolation", "-e", ALPHAPOSE_DIR])
-
-    mb_requirements = os.path.join(MOTIONBERT_DIR, "requirements.txt")
-    if os.path.exists(mb_requirements):
-        print("[app.py] Installing MotionBERT's requirements...")
-        _run([sys.executable, "-m", "pip", "install", "-r", mb_requirements])
-    else:
-        print(f"[app.py] WARNING: {mb_requirements} not found — skipping "
-              f"(MotionBERT's scripts may fail on a missing dependency).")
-
-    with open(_SETUP_DONE_MARKER, "w") as f:
-        f.write("done\n")
-    print("[app.py] Setup complete.")
-
-
-# --------------------------------------------------------------------------
 # Optional: YOLOv11 (Ultralytics) as the person detector, instead of
 # AlphaPose's bundled YOLOv3-SPP. This avoids downloading yolov3-spp.weights
 # entirely and lets AlphaPose skip running its own detector, via its
@@ -179,7 +125,7 @@ def ensure_alphapose_and_motionbert_installed():
 # Ultralytics license) — check that fits your use case before shipping this.
 # --------------------------------------------------------------------------
 def run_yolov11_person_detection(video_path: str, work_dir: str,
-                                  model_name: str = "yolo11s.pt",
+                                  model_name: str = "yolo11n.pt",
                                   conf: float = 0.4) -> str:
     """
     Runs Ultralytics YOLOv11 over every frame of the video, keeps only
@@ -434,7 +380,6 @@ def export_mesh_frames_as_obj(mesh_out_dir: str, obj_dir: str, stride: int = 1) 
 # --------------------------------------------------------------------------
 def run_pipeline(video_path: str, out_dir: str, do_mesh: bool = True, obj_stride: int = 1,
                   use_yolov11: bool = False):
-    ensure_alphapose_and_motionbert_installed()
     os.makedirs(out_dir, exist_ok=True)
     ap_dir = os.path.join(out_dir, "alphapose")
     mb_dir = os.path.join(out_dir, "motionbert_pose3d")
@@ -473,13 +418,7 @@ def build_gradio_app():
     import gradio as gr
     import tempfile
 
-    try:
-        import spaces  # only present on HF Spaces; safe to skip elsewhere
-        _HAS_SPACES = True
-    except ImportError:
-        _HAS_SPACES = False
-
-    def _infer_impl(video_file, produce_mesh, use_yolov11):
+    def _infer(video_file, produce_mesh, use_yolov11):
         work_dir = tempfile.mkdtemp(prefix="pose_pipeline_")
         try:
             result = run_pipeline(video_file, work_dir, do_mesh=produce_mesh, use_yolov11=use_yolov11)
@@ -492,19 +431,6 @@ def build_gradio_app():
             mesh_video = vids[0] if vids else None
 
         return result["joints_csv"], result["joints_csv_wide"], mesh_video
-
-    # ZeroGPU requires at least one @spaces.GPU-decorated function to exist
-    # at startup, or its instrumentation fails (this is what produced the
-    # "No @spaces.GPU function detected" + the confusing secondary TypeError
-    # you saw). Decorating here satisfies that check. Reminder (see README):
-    # this does NOT guarantee the AlphaPose/MotionBERT subprocesses this
-    # function launches actually get GPU access under ZeroGPU — only that
-    # the app itself starts cleanly. duration= is the max seconds ZeroGPU
-    # will let one call hold the GPU; raise it if your videos are long.
-    if _HAS_SPACES:
-        _infer = spaces.GPU(duration=180)(_infer_impl)
-    else:
-        _infer = _infer_impl
 
     with gr.Blocks(title="AlphaPose + MotionBERT: Video -> 3D Joints & Mesh") as demo:
         gr.Markdown(
@@ -543,22 +469,11 @@ def main():
         print(json.dumps(result, indent=2))
     else:
         demo = build_gradio_app()
-        # show_api=False: works around a known gradio_client bug
-        # ("TypeError: argument of type 'bool' is not iterable") that fires
-        # while auto-generating the /api schema page for functions with
-        # boolean args (our produce_mesh / use_yolov11 checkboxes trigger
-        # it on some gradio_client versions). Skipping schema generation
-        # avoids the crash entirely; the UI itself is unaffected.
-        #
-        # No server_name/server_port here on purpose: on a plain `sdk: gradio`
-        # Space (this no-Docker build), the Spaces runtime manages the host/
-        # port binding and reverse proxy itself — forcing 0.0.0.0:7860
-        # manually is a Docker-space habit and was the actual cause of the
-        # "When localhost is not accessible" error (gradio's own startup
-        # self-check couldn't reach the port it expected). If you're running
-        # this outside a Space (plain `python app.py` locally), gradio's
-        # defaults already bind to a reachable local port.
-        demo.launch(show_api=False)
+        # show_api=False skips building the /api docs schema entirely — the
+        # exact code path that trips the pydantic/gradio_client schema bug
+        # above. Cheap insurance even with the requirements.txt pins in place.
+        demo.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 7860)),
+                    show_api=False)
 
 
 if __name__ == "__main__":

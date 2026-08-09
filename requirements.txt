@@ -1,15 +1,18 @@
-# AlphaPose and MotionBERT are deliberately NOT installed here. Both
-# `-e ./AlphaPose` and `-r ./MotionBERT/requirements.txt` fail on HF's
-# Gradio-SDK builder: requirements.txt is installed in a layer that runs
-# BEFORE your repo's own files are copied in, so any reference to a local
-# path in this file will always 404, regardless of what you've pushed.
-# app.py installs both, once, at container startup instead — see
-# ensure_alphapose_and_motionbert_installed() in app.py.
-
-gradio>=4.44.1         # ZeroGPU auto-injects gradio[oauth] too; if you still hit the
-                        # "argument of type 'bool' is not iterable" schema bug, bump this
-                        # (e.g. gradio>=5.0) — show_api=False in app.py also works around it
+# Dependencies for app.py (the orchestrator + Gradio UI).
+# AlphaPose's and MotionBERT's own requirements.txt files are installed
+# separately inside the Dockerfile, from their cloned repos.
+#
+# gradio/pydantic are pinned deliberately: newer Pydantic (>=2.11) changed
+# how it emits JSON-schema `additionalProperties: true`, which crashes
+# gradio_client's schema builder with
+#   "TypeError: argument of type 'bool' is not iterable"
+# on launch (a widely-reported gradio issue, not anything pipeline-specific).
+# Keep these two pins together; don't let pip float pydantic up on its own.
+gradio==4.44.1
+pydantic<2.11
+numpy<2.0        # MotionBERT/AlphaPose era code assumes NumPy 1.x
 pandas>=2.0
 opencv-python-headless>=4.8
-huggingface_hub>=0.23,<1.0   # gradio 4.x's oauth.py imports HfFolder, removed in huggingface_hub 1.0+
-ultralytics>=8.3        # YOLOv11 detector — AGPL-3.0, check this fits your project
+huggingface_hub>=0.23
+ultralytics>=8.3        # only needed if you use --use_yolov11 (AGPL-3.0 — check licensing)
+
