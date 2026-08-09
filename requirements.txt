@@ -10,9 +10,10 @@
 # Keep these two pins together; don't let pip float pydantic up on its own.
 gradio==4.44.1
 pydantic<2.11
+starlette<1.0    # gradio 4.44.1 calls Jinja2's TemplateResponse the pre-1.0 way; Starlette 1.0 breaks it
+fastapi<1.0      # keep in the same pre-1.0 generation as starlette above
 numpy<2.0        # MotionBERT/AlphaPose era code assumes NumPy 1.x
 pandas>=2.0
 opencv-python-headless>=4.8
 huggingface_hub<1.0    # gradio 4.44.1's oauth.py still imports the now-removed HfFolder from 1.x
 ultralytics>=8.3        # only needed if you use --use_yolov11 (AGPL-3.0 — check licensing)
-
