@@ -417,7 +417,13 @@ def run_pipeline(video_path: str, out_dir: str, do_mesh: bool = True, obj_stride
 def build_gradio_app():
     import gradio as gr
     import tempfile
+    try:
+        import spaces  # only present on HF ZeroGPU Spaces
+        gpu_decorator = spaces.GPU(duration=300)  # seconds; raise if your videos are long
+    except ImportError:
+        gpu_decorator = lambda f: f  # no-op locally / on non-ZeroGPU Spaces
 
+    @gpu_decorator
     def _infer(video_file, produce_mesh, use_yolov11):
         work_dir = tempfile.mkdtemp(prefix="pose_pipeline_")
         try:
