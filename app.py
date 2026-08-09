@@ -419,7 +419,7 @@ def build_gradio_app():
     import tempfile
     try:
         import spaces  # only present on HF ZeroGPU Spaces
-        gpu_decorator = spaces.GPU(duration=300)  # seconds; raise if your videos are long
+        gpu_decorator = spaces.GPU(duration=50)  # seconds; raise if your videos are long
     except ImportError:
         gpu_decorator = lambda f: f  # no-op locally / on non-ZeroGPU Spaces
 
