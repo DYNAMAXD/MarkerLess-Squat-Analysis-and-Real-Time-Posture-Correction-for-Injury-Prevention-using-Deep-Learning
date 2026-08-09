@@ -9,5 +9,5 @@
 gradio         # left unpinned — ZeroGPU Spaces auto-inject their own gradio[oauth] pin
 pandas>=2.0
 opencv-python-headless>=4.8
-huggingface_hub>=0.23
+huggingface_hub>=0.23,<1.0   # gradio 4.x's oauth.py imports HfFolder, removed in huggingface_hub 1.0+
 ultralytics>=8.3        # YOLOv11 detector — AGPL-3.0, check this fits your project
