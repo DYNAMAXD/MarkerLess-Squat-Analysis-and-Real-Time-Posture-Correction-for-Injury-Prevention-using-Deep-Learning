@@ -13,6 +13,6 @@ pydantic<2.11
 numpy<2.0        # MotionBERT/AlphaPose era code assumes NumPy 1.x
 pandas>=2.0
 opencv-python-headless>=4.8
-huggingface_hub>=0.23
+huggingface_hub<1.0    # gradio 4.44.1's oauth.py still imports the now-removed HfFolder from 1.x
 ultralytics>=8.3        # only needed if you use --use_yolov11 (AGPL-3.0 — check licensing)
 
