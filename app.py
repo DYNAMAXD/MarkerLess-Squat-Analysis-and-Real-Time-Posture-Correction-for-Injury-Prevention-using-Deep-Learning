@@ -543,7 +543,14 @@ def main():
         print(json.dumps(result, indent=2))
     else:
         demo = build_gradio_app()
-        demo.launch()
+        # show_api=False: works around a known gradio_client bug
+        # ("TypeError: argument of type 'bool' is not iterable") that fires
+        # while auto-generating the /api schema page for functions with
+        # boolean args (our produce_mesh / use_yolov11 checkboxes trigger
+        # it on some gradio_client versions). Skipping schema generation
+        # avoids the crash entirely; the UI itself is unaffected.
+        demo.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 7860)),
+                    show_api=False)
 
 
 if __name__ == "__main__":

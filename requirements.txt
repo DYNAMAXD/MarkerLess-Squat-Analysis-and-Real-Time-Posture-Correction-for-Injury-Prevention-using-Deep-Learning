@@ -6,7 +6,9 @@
 # app.py installs both, once, at container startup instead — see
 # ensure_alphapose_and_motionbert_installed() in app.py.
 
-gradio         # left unpinned — ZeroGPU Spaces auto-inject their own gradio[oauth] pin
+gradio>=4.44.1         # ZeroGPU auto-injects gradio[oauth] too; if you still hit the
+                        # "argument of type 'bool' is not iterable" schema bug, bump this
+                        # (e.g. gradio>=5.0) — show_api=False in app.py also works around it
 pandas>=2.0
 opencv-python-headless>=4.8
 huggingface_hub>=0.23,<1.0   # gradio 4.x's oauth.py imports HfFolder, removed in huggingface_hub 1.0+
