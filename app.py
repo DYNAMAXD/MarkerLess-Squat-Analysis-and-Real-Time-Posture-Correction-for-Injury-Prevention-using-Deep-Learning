@@ -549,8 +549,16 @@ def main():
         # boolean args (our produce_mesh / use_yolov11 checkboxes trigger
         # it on some gradio_client versions). Skipping schema generation
         # avoids the crash entirely; the UI itself is unaffected.
-        demo.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 7860)),
-                    show_api=False)
+        #
+        # No server_name/server_port here on purpose: on a plain `sdk: gradio`
+        # Space (this no-Docker build), the Spaces runtime manages the host/
+        # port binding and reverse proxy itself — forcing 0.0.0.0:7860
+        # manually is a Docker-space habit and was the actual cause of the
+        # "When localhost is not accessible" error (gradio's own startup
+        # self-check couldn't reach the port it expected). If you're running
+        # this outside a Space (plain `python app.py` locally), gradio's
+        # defaults already bind to a reachable local port.
+        demo.launch(show_api=False)
 
 
 if __name__ == "__main__":
