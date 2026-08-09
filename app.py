@@ -473,7 +473,13 @@ def build_gradio_app():
     import gradio as gr
     import tempfile
 
-    def _infer(video_file, produce_mesh, use_yolov11):
+    try:
+        import spaces  # only present on HF Spaces; safe to skip elsewhere
+        _HAS_SPACES = True
+    except ImportError:
+        _HAS_SPACES = False
+
+    def _infer_impl(video_file, produce_mesh, use_yolov11):
         work_dir = tempfile.mkdtemp(prefix="pose_pipeline_")
         try:
             result = run_pipeline(video_file, work_dir, do_mesh=produce_mesh, use_yolov11=use_yolov11)
@@ -486,6 +492,19 @@ def build_gradio_app():
             mesh_video = vids[0] if vids else None
 
         return result["joints_csv"], result["joints_csv_wide"], mesh_video
+
+    # ZeroGPU requires at least one @spaces.GPU-decorated function to exist
+    # at startup, or its instrumentation fails (this is what produced the
+    # "No @spaces.GPU function detected" + the confusing secondary TypeError
+    # you saw). Decorating here satisfies that check. Reminder (see README):
+    # this does NOT guarantee the AlphaPose/MotionBERT subprocesses this
+    # function launches actually get GPU access under ZeroGPU — only that
+    # the app itself starts cleanly. duration= is the max seconds ZeroGPU
+    # will let one call hold the GPU; raise it if your videos are long.
+    if _HAS_SPACES:
+        _infer = spaces.GPU(duration=180)(_infer_impl)
+    else:
+        _infer = _infer_impl
 
     with gr.Blocks(title="AlphaPose + MotionBERT: Video -> 3D Joints & Mesh") as demo:
         gr.Markdown(
@@ -524,7 +543,7 @@ def main():
         print(json.dumps(result, indent=2))
     else:
         demo = build_gradio_app()
-        demo.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 7860)))
+        demo.launch()
 
 
 if __name__ == "__main__":
