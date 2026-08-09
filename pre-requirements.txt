@@ -2,10 +2,15 @@
 # importable already when pip processes `-e ./AlphaPose` in requirements.txt,
 # since AlphaPose's setup.py imports torch.utils.cpp_extension at build time.
 #
-# AlphaPose is old code (last major updates around torch 1.x/1.11-era). If
-# the `-e ./AlphaPose` build step in requirements.txt fails with API/ABI
-# errors, that's usually a torch-version mismatch — try pinning torch to
-# something in the 1.10-1.13 range before reaching for Docker.
+# This pin is chosen for AlphaPose compatibility (its C++ extensions predate
+# torch 2.x), NOT for ZeroGPU. Make sure your Space's hardware is a
+# dedicated GPU (T4/L4/A10G) or CPU-basic — NOT ZeroGPU, which forces its
+# own short list of supported torch builds and doesn't work with this
+# pipeline's subprocess-based architecture anyway (see README.md).
+#
+# If the `-e ./AlphaPose` build step in requirements.txt fails with API/ABI
+# errors on this pin, try 1.13.1 / 1.11.0 (older, closer to AlphaPose's era)
+# before reaching for Docker.
 torch==2.0.1
 torchvision==0.15.2
 numpy<2.0
