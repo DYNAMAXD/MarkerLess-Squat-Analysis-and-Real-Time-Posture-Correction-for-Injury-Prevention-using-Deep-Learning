@@ -1,0 +1,13 @@
+# Installed BEFORE requirements.txt (Spaces convention). torch has to be
+# importable already when pip processes `-e ./AlphaPose` in requirements.txt,
+# since AlphaPose's setup.py imports torch.utils.cpp_extension at build time.
+#
+# AlphaPose is old code (last major updates around torch 1.x/1.11-era). If
+# the `-e ./AlphaPose` build step in requirements.txt fails with API/ABI
+# errors, that's usually a torch-version mismatch — try pinning torch to
+# something in the 1.10-1.13 range before reaching for Docker.
+torch==2.0.1
+torchvision==0.15.2
+numpy<2.0
+cython
+cython_bbox

@@ -1,0 +1,16 @@
+# Installs AlphaPose FROM the local ./AlphaPose/ folder you committed to
+# this Space (see SETUP.md). `-e` (editable) makes pip run AlphaPose's
+# setup.py in place — this is what compiles its C++ extensions, replacing
+# the `python setup.py build develop` step from the Docker version.
+-e ./AlphaPose
+
+# Pulls in MotionBERT's own dependency list (pure Python, no compiled
+# extensions) from the copy you committed at ./MotionBERT/.
+-r ./MotionBERT/requirements.txt
+
+# App / orchestration deps
+gradio>=4.36
+pandas>=2.0
+opencv-python-headless>=4.8
+huggingface_hub>=0.23
+ultralytics>=8.3        # YOLOv11 detector — AGPL-3.0, check this fits your project
