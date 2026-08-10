@@ -64,8 +64,9 @@ import pandas as pd
 # --------------------------------------------------------------------------
 # Configuration — override via environment variables in your Dockerfile/Space
 # --------------------------------------------------------------------------
-ALPHAPOSE_DIR = os.environ.get("ALPHAPOSE_DIR", "/app/AlphaPose")
-MOTIONBERT_DIR = os.environ.get("MOTIONBERT_DIR", "/app/MotionBERT")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ALPHAPOSE_DIR = os.environ.get("ALPHAPOSE_DIR", os.path.join(BASE_DIR, "AlphaPose"))
+MOTIONBERT_DIR = os.environ.get("MOTIONBERT_DIR", os.path.join(BASE_DIR, "MotionBERT"))
 
 ALPHAPOSE_CFG = os.environ.get(
     "ALPHAPOSE_CFG",
@@ -125,7 +126,7 @@ def _run(cmd, cwd=None):
 # Ultralytics license) — check that fits your use case before shipping this.
 # --------------------------------------------------------------------------
 def run_yolov11_person_detection(video_path: str, work_dir: str,
-                                  model_name: str = "yolo11n.pt",
+                                  model_name: str = "yolo11s.pt",
                                   conf: float = 0.4) -> str:
     """
     Runs Ultralytics YOLOv11 over every frame of the video, keeps only
@@ -142,6 +143,9 @@ def run_yolov11_person_detection(video_path: str, work_dir: str,
     caches, and match this function's `image_id` field to that convention
     before relying on this for a full run.
     """
+    if model_name is None:
+        model_name = os.path.join(BASE_DIR, "yolo11s.pt")
+        
     from ultralytics import YOLO
     import cv2
 
