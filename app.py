@@ -1,45 +1,42 @@
 """
-app.py — Video -> AlphaPose (2D) -> MotionBERT (3D pose + mesh) pipeline.
+app.py — Video -> YOLOv11 (person det) -> AlphaPose (2D pose) -> MotionBERT (3D pose + mesh) pipeline.
 
 WHAT THIS FILE DOES
 --------------------
 1. Takes an input video.
-2. Calls AlphaPose's own `scripts/demo_inference.py` (as a subprocess) to
-   extract 2D keypoints in Halpe-26 format -> alphapose-results.json
-3. Calls MotionBERT's own `infer_wild.py` (as a subprocess) to lift the 2D
+2. Runs Ultralytics YOLOv11 (yolo11s.pt, shipped in this repo — never
+   downloaded) over every frame to get person bounding boxes.
+3. Calls AlphaPose's own `scripts/demo_inference.py` (as a subprocess),
+   fed those YOLOv11 boxes via `--detfile`, to extract 2D keypoints in
+   Halpe-26 format -> alphapose-results.json. AlphaPose's own YOLOv3
+   detector is never invoked.
+4. Calls MotionBERT's own `infer_wild.py` (as a subprocess) to lift the 2D
    keypoints to 3D (H36M 17-joint format) -> X3D.npy
-4. Converts X3D.npy into a tidy, frame-by-frame CSV of every joint's (x,y,z).
-5. Calls MotionBERT's own `infer_wild_mesh.py` (as a subprocess) to produce
-   the SMPL mesh sequence (vertices + rendered overlay video), using the
-   X3D.npy from step 3 as the root-trajectory reference.
-6. Exports the mesh vertices as a sequence of .obj files (one per frame,
-   or every Nth frame) for use in Blender/MeshLab/etc.
+5. Converts X3D.npy into a tidy, frame-by-frame CSV of every joint's (x,y,z).
+6. Calls MotionBERT's own `infer_wild_mesh.py` (as a subprocess) to produce
+   the SMPL mesh sequence, using the X3D.npy from step 5 as the
+   root-trajectory reference.
+7. Exports the mesh vertices as a sequence of .obj files.
 
-WHY SUBPROCESS CALLS INSTEAD OF RE-IMPLEMENTING THE MODELS INLINE
--------------------------------------------------------------------
-AlphaPose and MotionBERT are large research codebases (custom CUDA/C++ ops,
-specific coordinate normalization, specific checkpoint loading logic, config
-plumbing). Re-typing their internals from memory into "one file" would very
-likely silently produce wrong joint numbers. Calling their own, maintained
-CLI entry points is the only way to guarantee this matches the papers'
-released code. This script is the "glue": it does real work (running the
-pipeline end-to-end, producing your CSV + mesh files, and giving you a
-Gradio UI for a Hugging Face Space), while delegating model internals to
-the upstream, unmodified repos.
+DIRECTORY LAYOUT THIS SCRIPT EXPECTS
+-------------------------------------
+This file lives at the repo root of the HF Space, alongside:
+    AlphaPose/
+        pretrained_models/halpe26_fast_res50_256x192.pth
+        configs/halpe_26/resnet/256x192_res50_lr1e-3_1x.yaml
+    MotionBERT/
+        checkpoint/pose3d/FT_MB_lite_MB_ft_h36m_global_lite/best_epoch.bin
+        checkpoint/mesh/FT_MB_release_MB_ft_pw3d/best_epoch.bin
+        data/mesh/smpl/SMPL_NEUTRAL.pkl   <- you must supply this (SMPL license)
+    yolo11s.pt
 
-DIRECTORY LAYOUT THIS SCRIPT EXPECTS (see MODELS.md for exact download steps)
--------------------------------------------------------------------------------
-/app/AlphaPose/                        <- git clone of MVIG-SJTU/AlphaPose, built
-    pretrained_models/halpe26_fast_res50_256x192.pth
-    pretrained_models/yolov3-spp.weights   (or yolox weights, see MODELS.md)
-    configs/halpe_26/resnet/256x192_res50_lr1e-3_1x.yaml
+All paths below are computed relative to this file's own location (not a
+hardcoded Docker path), so it works wherever the Space checks it out. You
+can still override any of them with the ALPHAPOSE_DIR / MOTIONBERT_DIR /
+YOLO_WEIGHTS env vars if you ever move things around.
 
-/app/MotionBERT/                       <- git clone of Walter0807/MotionBERT
-    checkpoint/pose3d/FT_MB_lite_MB_ft_h36m_global_lite/best_epoch.bin
-    checkpoint/mesh/FT_MB_release_MB_ft_pw3d/best_epoch.bin
-    data/mesh/smpl/SMPL_NEUTRAL.pkl    <- YOU must supply this (SMPL license)
-
-Both paths are overridable with the ALPHAPOSE_DIR / MOTIONBERT_DIR env vars.
+AlphaPose's own bundled YOLOv3 detector is intentionally never used —
+YOLOv11 is the only detector this script runs, always.
 
 USAGE
 -----
@@ -54,7 +51,6 @@ import argparse
 import glob
 import json
 import os
-import shutil
 import subprocess
 import sys
 
@@ -62,11 +58,13 @@ import numpy as np
 import pandas as pd
 
 # --------------------------------------------------------------------------
-# Configuration — override via environment variables in your Dockerfile/Space
+# Configuration — anchored to this file's location, overridable via env vars
 # --------------------------------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 ALPHAPOSE_DIR = os.environ.get("ALPHAPOSE_DIR", os.path.join(BASE_DIR, "AlphaPose"))
 MOTIONBERT_DIR = os.environ.get("MOTIONBERT_DIR", os.path.join(BASE_DIR, "MotionBERT"))
+YOLO_WEIGHTS = os.environ.get("YOLO_WEIGHTS", os.path.join(BASE_DIR, "yolo11s.pt"))
 
 ALPHAPOSE_CFG = os.environ.get(
     "ALPHAPOSE_CFG",
@@ -87,7 +85,6 @@ MOTIONBERT_MESH_CKPT = os.environ.get(
 )
 
 # H36M 17-joint order used by MotionBERT's 3D pose / X3D.npy output.
-# (See Walter0807/MotionBERT docs: "The model uses 17 body keypoints, H36M format".)
 H36M_JOINT_NAMES = [
     "pelvis", "right_hip", "right_knee", "right_ankle",
     "left_hip", "left_knee", "left_ankle",
@@ -96,9 +93,6 @@ H36M_JOINT_NAMES = [
     "right_shoulder", "right_elbow", "right_wrist",
 ]
 
-# Halpe-26 joint order produced by AlphaPose (body 0-25; first 17 correspond
-# roughly to COCO ordering, 17-25 are head/feet extras). Kept here so the raw
-# 2D keypoints can also be dumped to CSV if you want them alongside the 3D.
 HALPE26_JOINT_NAMES = [
     "nose", "left_eye", "right_eye", "left_ear", "right_ear",
     "left_shoulder", "right_shoulder", "left_elbow", "right_elbow",
@@ -115,42 +109,40 @@ def _run(cmd, cwd=None):
 
 
 # --------------------------------------------------------------------------
-# Optional: YOLOv11 (Ultralytics) as the person detector, instead of
-# AlphaPose's bundled YOLOv3-SPP. This avoids downloading yolov3-spp.weights
-# entirely and lets AlphaPose skip running its own detector, via its
-# documented `--detfile <json>` / FileDetectionLoader path ("Detecting
-# results from other detectors are also supported as a file input" —
-# AlphaPose paper, System section).
-#
-# Ultralytics YOLOv11 weights are AGPL-3.0 licensed (or require a commercial
-# Ultralytics license) — check that fits your use case before shipping this.
+# Step 1: YOLOv11 (Ultralytics) — the ONLY detector this pipeline uses.
+# AlphaPose's own bundled YOLOv3 is never invoked; boxes are handed to
+# AlphaPose via --detfile ("Detecting results from other detectors are
+# also supported as a file input" — AlphaPose paper, System section).
 # --------------------------------------------------------------------------
-def run_yolov11_person_detection(video_path: str, work_dir: str,
-                                  model_name: str = "yolo11s.pt",
-                                  conf: float = 0.4) -> str:
+def run_yolov11_person_detection(video_path: str, work_dir: str, conf: float = 0.4) -> str:
     """
-    Runs Ultralytics YOLOv11 over every frame of the video, keeps only
+    Runs the local yolo11s.pt over every frame of the video, keeps only
     person detections (COCO class 0), and writes them as a JSON file in
     the COCO-results format AlphaPose's FileDetectionLoader consumes:
         [{"image_id": <frame_index>, "category_id": 1,
           "bbox": [x, y, w, h], "score": <float>}, ...]
 
+    Loads the weights from YOLO_WEIGHTS (yolo11s.pt shipped in this repo)
+    — never a bare model alias, so ultralytics never reaches out to the
+    internet to fetch anything.
+
     VERIFY BEFORE TRUSTING SILENTLY: AlphaPose's exact expectation for
     `image_id` (0-based frame index vs. an "AlphaPose_<n>.jpg"-style name)
-    has varied across commits of alphapose/utils/file_detector.py. Quick
-    sanity check: run AlphaPose once on a couple of frames with its own
-    `--detector yolo`, inspect the intermediate detection json it logs/
-    caches, and match this function's `image_id` field to that convention
-    before relying on this for a full run.
+    has varied across commits of alphapose/utils/file_detector.py. Sanity
+    check once against your cloned AlphaPose version if results look off.
     """
-    if model_name is None:
-        model_name = os.path.join(BASE_DIR, "yolo11s.pt")
-        
     from ultralytics import YOLO
     import cv2
 
+    if not os.path.exists(YOLO_WEIGHTS):
+        raise FileNotFoundError(
+            f"Missing YOLOv11 weights at {YOLO_WEIGHTS}. This pipeline only "
+            f"ever uses the local yolo11s.pt — put it at the repo root, or "
+            f"set the YOLO_WEIGHTS env var to its actual path."
+        )
+
     os.makedirs(work_dir, exist_ok=True)
-    model = YOLO(model_name)  # auto-downloads the weight file on first use
+    model = YOLO(YOLO_WEIGHTS)
 
     cap = cv2.VideoCapture(video_path)
     detections = []
@@ -180,16 +172,19 @@ def run_yolov11_person_detection(video_path: str, work_dir: str,
 
 
 # --------------------------------------------------------------------------
-# Step 1: AlphaPose — video -> 2D keypoints JSON (Halpe-26)
+# Step 2: AlphaPose — 2D keypoints (Halpe-26), driven ONLY by the YOLOv11
+# detfile above. There is no code path left that falls back to AlphaPose's
+# own detector.
 # --------------------------------------------------------------------------
-def run_alphapose(video_path: str, work_dir: str, detfile_path: str = None) -> str:
+def run_alphapose(video_path: str, work_dir: str, detfile_path: str) -> str:
     os.makedirs(work_dir, exist_ok=True)
     for required in (ALPHAPOSE_CFG, ALPHAPOSE_CKPT):
         if not os.path.exists(required):
             raise FileNotFoundError(
-                f"Missing AlphaPose file: {required}\n"
-                f"See MODELS.md for exact download instructions."
+                f"Missing AlphaPose file: {required}\nSee MODELS.md for exact download instructions."
             )
+    if not detfile_path or not os.path.exists(detfile_path):
+        raise FileNotFoundError(f"Missing YOLOv11 detections file: {detfile_path}")
 
     demo_script = os.path.join(ALPHAPOSE_DIR, "scripts/demo_inference.py")
     cmd = [
@@ -198,16 +193,11 @@ def run_alphapose(video_path: str, work_dir: str, detfile_path: str = None) -> s
         "--checkpoint", ALPHAPOSE_CKPT,
         "--video", video_path,
         "--outdir", work_dir,
-        "--sp",            # single-process mode, safer inside a container
-        "--pose_track",    # keeps a single consistent person ID across frames
+        "--sp",             # single-process mode, safer inside a container/Space
+        "--pose_track",     # keeps a single consistent person ID across frames
         "--save_video",
+        "--detfile", detfile_path,  # YOLOv11 boxes — AlphaPose's own detector is never run
     ]
-    if detfile_path:
-        # Use pre-computed (e.g. YOLOv11) boxes instead of AlphaPose's own
-        # bundled detector — no --detector/yolov3-spp.weights needed at all.
-        cmd += ["--detfile", detfile_path]
-    else:
-        cmd += ["--detector", "yolo"]  # AlphaPose's own YOLOv3-SPP
     _run(cmd, cwd=ALPHAPOSE_DIR)
 
     json_path = os.path.join(work_dir, "alphapose-results.json")
@@ -219,15 +209,12 @@ def run_alphapose(video_path: str, work_dir: str, detfile_path: str = None) -> s
 
 
 # --------------------------------------------------------------------------
-# Step 2: MotionBERT — 2D keypoints -> 3D pose (H36M, 17 joints)
+# Step 3: MotionBERT — 2D keypoints -> 3D pose (H36M, 17 joints)
 # --------------------------------------------------------------------------
 def run_motionbert_pose3d(video_path: str, json_path: str, out_dir: str) -> str:
     os.makedirs(out_dir, exist_ok=True)
     if not os.path.exists(MOTIONBERT_POSE3D_CKPT):
-        raise FileNotFoundError(
-            f"Missing MotionBERT 3D-pose checkpoint: {MOTIONBERT_POSE3D_CKPT}\n"
-            f"See MODELS.md."
-        )
+        raise FileNotFoundError(f"Missing MotionBERT 3D-pose checkpoint: {MOTIONBERT_POSE3D_CKPT}")
 
     script = os.path.join(MOTIONBERT_DIR, "infer_wild.py")
     cmd = [
@@ -245,16 +232,10 @@ def run_motionbert_pose3d(video_path: str, json_path: str, out_dir: str) -> str:
 
 
 def pose3d_npy_to_csv(npy_path: str, csv_path: str) -> str:
-    """
-    Converts MotionBERT's X3D.npy (shape [T, 17, 3]) into a tidy,
-    frame-by-frame CSV: one row per (frame, joint).
-    """
+    """Converts MotionBERT's X3D.npy (shape [T, 17, 3]) into a tidy, frame-by-frame CSV."""
     poses = np.load(npy_path)  # [T, J, 3]
     if poses.ndim != 3 or poses.shape[1] != len(H36M_JOINT_NAMES):
-        print(
-            f"[app.py] WARNING: unexpected pose array shape {poses.shape}; "
-            f"expected [T, {len(H36M_JOINT_NAMES)}, 3]. Writing generic joint indices."
-        )
+        print(f"[app.py] WARNING: unexpected pose array shape {poses.shape}; using generic joint indices.")
         joint_names = [f"joint_{i}" for i in range(poses.shape[1])]
     else:
         joint_names = H36M_JOINT_NAMES
@@ -268,8 +249,6 @@ def pose3d_npy_to_csv(npy_path: str, csv_path: str) -> str:
     df = pd.DataFrame(rows)
     df.to_csv(csv_path, index=False)
 
-    # Also write a wide version (one row per frame, columns per joint) since
-    # that's often more convenient for spreadsheets / quick plotting.
     wide = df.pivot(index="frame", columns="joint_name", values=["x", "y", "z"])
     wide.columns = [f"{jname}_{axis}" for axis, jname in wide.columns]
     wide_path = csv_path.replace(".csv", "_wide.csv")
@@ -280,21 +259,18 @@ def pose3d_npy_to_csv(npy_path: str, csv_path: str) -> str:
 
 
 # --------------------------------------------------------------------------
-# Step 3: MotionBERT — mesh (SMPL) recovery
+# Step 4: MotionBERT — mesh (SMPL) recovery
 # --------------------------------------------------------------------------
 def run_motionbert_mesh(video_path: str, json_path: str, out_dir: str, ref_3d_motion_path: str = None) -> str:
     os.makedirs(out_dir, exist_ok=True)
     if not os.path.exists(MOTIONBERT_MESH_CKPT):
-        raise FileNotFoundError(
-            f"Missing MotionBERT mesh checkpoint: {MOTIONBERT_MESH_CKPT}\nSee MODELS.md."
-        )
+        raise FileNotFoundError(f"Missing MotionBERT mesh checkpoint: {MOTIONBERT_MESH_CKPT}")
     smpl_model = os.path.join(MOTIONBERT_DIR, "data/mesh/smpl/SMPL_NEUTRAL.pkl")
     if not os.path.exists(smpl_model):
         raise FileNotFoundError(
-            "Missing SMPL body model at "
-            f"{smpl_model}\n"
-            "This file is NOT redistributable — you must register at "
-            "https://smpl.is.tue.mpg.de/ and download it yourself. See MODELS.md."
+            f"Missing SMPL body model at {smpl_model}\n"
+            "Register at https://smpl.is.tue.mpg.de/ and add it yourself (licensed, "
+            "non-redistributable). Or run with --no_mesh to skip this step."
         )
 
     script = os.path.join(MOTIONBERT_DIR, "infer_wild_mesh.py")
@@ -311,28 +287,20 @@ def run_motionbert_mesh(video_path: str, json_path: str, out_dir: str, ref_3d_mo
 
 
 def export_mesh_frames_as_obj(mesh_out_dir: str, obj_dir: str, stride: int = 1) -> str:
-    """
-    Best-effort export of the mesh sequence to per-frame .obj files.
-    infer_wild_mesh.py saves its raw vertex/face data as an .npz/.npy inside
-    mesh_out_dir; the exact key name has changed across MotionBERT commits,
-    so this function tries the common ones and tells you what it found if
-    none match, rather than failing silently.
-    """
+    """Best-effort export of the mesh sequence to per-frame .obj files."""
     os.makedirs(obj_dir, exist_ok=True)
     candidates = glob.glob(os.path.join(mesh_out_dir, "*.npz")) + \
                  glob.glob(os.path.join(mesh_out_dir, "*.npy"))
     if not candidates:
-        print(f"[app.py] No .npz/.npy mesh output found in {mesh_out_dir}; "
-              f"skipping .obj export. Check the rendered mesh video there instead.")
+        print(f"[app.py] No .npz/.npy mesh output found in {mesh_out_dir}; skipping .obj export.")
         return obj_dir
 
     for cand in candidates:
         try:
             data = np.load(cand, allow_pickle=True)
-        except Exception as e:
+        except Exception:
             continue
-        verts = None
-        faces = None
+        verts, faces = None, None
         if isinstance(data, np.lib.npyio.NpzFile):
             for key in ("verts", "vertices", "smpl_verts", "pred_verts"):
                 if key in data:
@@ -343,24 +311,21 @@ def export_mesh_frames_as_obj(mesh_out_dir: str, obj_dir: str, stride: int = 1) 
                     faces = data[key]
                     break
         else:
-            verts = data  # plain .npy of vertices
+            verts = data
 
         if verts is None:
             continue
 
-        # Fall back to the SMPL face topology shipped with MotionBERT if the
-        # output file didn't include faces explicitly.
         if faces is None:
             faces_npy = os.path.join(MOTIONBERT_DIR, "data/mesh/smpl_faces.npy")
             if os.path.exists(faces_npy):
                 faces = np.load(faces_npy)
             else:
-                print(f"[app.py] Found vertices in {cand} but no face topology; "
-                      f"exporting a point cloud .obj instead of a full mesh.")
+                print(f"[app.py] Found vertices in {cand} but no face topology; exporting a point cloud .obj.")
 
         verts = np.asarray(verts)
         if verts.ndim == 2:
-            verts = verts[None, ...]  # single frame -> add time dim
+            verts = verts[None, ...]
 
         for t in range(0, verts.shape[0], max(1, stride)):
             obj_path = os.path.join(obj_dir, f"frame_{t:05d}.obj")
@@ -369,32 +334,26 @@ def export_mesh_frames_as_obj(mesh_out_dir: str, obj_dir: str, stride: int = 1) 
                     f.write(f"v {v[0]:.6f} {v[1]:.6f} {v[2]:.6f}\n")
                 if faces is not None:
                     for face in faces:
-                        # OBJ face indices are 1-based
                         f.write("f " + " ".join(str(int(idx) + 1) for idx in face) + "\n")
         print(f"[app.py] exported {verts.shape[0]} mesh frames from {cand} -> {obj_dir}")
         return obj_dir
 
-    print(f"[app.py] Found {len(candidates)} array file(s) in {mesh_out_dir} but "
-          f"none matched expected vertex keys. Inspect them manually: {candidates}")
+    print(f"[app.py] Found {len(candidates)} array file(s) but none matched expected vertex keys: {candidates}")
     return obj_dir
 
 
 # --------------------------------------------------------------------------
-# Full pipeline
+# Full pipeline — always YOLOv11 -> AlphaPose -> MotionBERT
 # --------------------------------------------------------------------------
-def run_pipeline(video_path: str, out_dir: str, do_mesh: bool = True, obj_stride: int = 1,
-                  use_yolov11: bool = False):
+def run_pipeline(video_path: str, out_dir: str, do_mesh: bool = True, obj_stride: int = 1):
     os.makedirs(out_dir, exist_ok=True)
+    yolo_dir = os.path.join(out_dir, "yolov11")
     ap_dir = os.path.join(out_dir, "alphapose")
     mb_dir = os.path.join(out_dir, "motionbert_pose3d")
     mesh_dir = os.path.join(out_dir, "motionbert_mesh")
     obj_dir = os.path.join(out_dir, "mesh_obj")
 
-    detfile_path = None
-    if use_yolov11:
-        yolo_dir = os.path.join(out_dir, "yolov11")
-        detfile_path = run_yolov11_person_detection(video_path, yolo_dir)
-
+    detfile_path = run_yolov11_person_detection(video_path, yolo_dir)
     json_path = run_alphapose(video_path, ap_dir, detfile_path=detfile_path)
     npy_path = run_motionbert_pose3d(video_path, json_path, mb_dir)
     csv_path = pose3d_npy_to_csv(npy_path, os.path.join(out_dir, "joints_3d.csv"))
@@ -406,6 +365,7 @@ def run_pipeline(video_path: str, out_dir: str, do_mesh: bool = True, obj_stride
         obj_result_dir = export_mesh_frames_as_obj(mesh_result_dir, obj_dir, stride=obj_stride)
 
     return {
+        "detections_json": detfile_path,
         "keypoints_2d_json": json_path,
         "pose3d_npy": npy_path,
         "joints_csv": csv_path,
@@ -428,10 +388,10 @@ def build_gradio_app():
         gpu_decorator = lambda f: f  # no-op locally / on non-ZeroGPU Spaces
 
     @gpu_decorator
-    def _infer(video_file, produce_mesh, use_yolov11):
+    def _infer(video_file, produce_mesh):
         work_dir = tempfile.mkdtemp(prefix="pose_pipeline_")
         try:
-            result = run_pipeline(video_file, work_dir, do_mesh=produce_mesh, use_yolov11=use_yolov11)
+            result = run_pipeline(video_file, work_dir, do_mesh=produce_mesh)
         except Exception as e:
             raise gr.Error(f"Pipeline failed: {e}")
 
@@ -442,23 +402,22 @@ def build_gradio_app():
 
         return result["joints_csv"], result["joints_csv_wide"], mesh_video
 
-    with gr.Blocks(title="AlphaPose + MotionBERT: Video -> 3D Joints & Mesh") as demo:
+    with gr.Blocks(title="YOLOv11 + AlphaPose + MotionBERT: Video -> 3D Joints & Mesh") as demo:
         gr.Markdown(
-            "# Video -> 2D pose (AlphaPose) -> 3D pose + mesh (MotionBERT)\n"
+            "# Video -> YOLOv11 detection -> AlphaPose (2D) -> MotionBERT (3D pose + mesh)\n"
             "Upload a video with a single, clearly visible person. "
-            "Processing is slow on CPU — a GPU Space is strongly recommended."
+            "Processing is slow on CPU — a GPU is strongly recommended."
         )
         with gr.Row():
             video_in = gr.Video(label="Input video")
         mesh_toggle = gr.Checkbox(value=True, label="Also compute SMPL mesh (slower)")
-        yolo_toggle = gr.Checkbox(value=False, label="Use YOLOv11 detector instead of AlphaPose's built-in YOLOv3")
         run_btn = gr.Button("Run pipeline", variant="primary")
         with gr.Row():
             csv_out = gr.File(label="Joints CSV (long format: frame, joint, x, y, z)")
             csv_wide_out = gr.File(label="Joints CSV (wide format: one row per frame)")
         mesh_video_out = gr.Video(label="Mesh overlay video (if computed)")
 
-        run_btn.click(_infer, inputs=[video_in, mesh_toggle, yolo_toggle],
+        run_btn.click(_infer, inputs=[video_in, mesh_toggle],
                        outputs=[csv_out, csv_wide_out, mesh_video_out])
     return demo
 
@@ -469,21 +428,14 @@ def main():
     parser.add_argument("--out_dir", type=str, default="outputs", help="Directory to write all outputs to.")
     parser.add_argument("--no_mesh", action="store_true", help="Skip the (slower) SMPL mesh step; only produce 3D joint CSV.")
     parser.add_argument("--obj_stride", type=int, default=1, help="Export every Nth frame as .obj (1 = every frame).")
-    parser.add_argument("--use_yolov11", action="store_true",
-                         help="Use Ultralytics YOLOv11 for person detection instead of AlphaPose's built-in YOLOv3-SPP.")
     args = parser.parse_args()
 
     if args.video:
-        result = run_pipeline(args.video, args.out_dir, do_mesh=not args.no_mesh,
-                               obj_stride=args.obj_stride, use_yolov11=args.use_yolov11)
+        result = run_pipeline(args.video, args.out_dir, do_mesh=not args.no_mesh, obj_stride=args.obj_stride)
         print(json.dumps(result, indent=2))
     else:
         demo = build_gradio_app()
-        # show_api=False skips building the /api docs schema entirely — the
-        # exact code path that trips the pydantic/gradio_client schema bug
-        # above. Cheap insurance even with the requirements.txt pins in place.
-        demo.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 7860)),
-                    show_api=False)
+        demo.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 7860)), show_api=False)
 
 
 if __name__ == "__main__":
