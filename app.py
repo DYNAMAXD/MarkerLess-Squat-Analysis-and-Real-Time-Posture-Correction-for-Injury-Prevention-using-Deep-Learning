@@ -104,8 +104,19 @@ HALPE26_JOINT_NAMES = [
 
 
 def _run(cmd, cwd=None):
-    print("[app.py] running:", " ".join(str(c) for c in cmd))
-    subprocess.run([str(c) for c in cmd], check=True, cwd=cwd)
+    cmd = [str(c) for c in cmd]
+    print("[app.py] running:", " ".join(cmd))
+    # capture_output + check the returncode ourselves so a failure's actual
+    # stderr (the real AlphaPose/MotionBERT traceback) ends up in the
+    # exception message instead of just "exit status 1".
+    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+    if result.stdout:
+        print(result.stdout[-4000:])  # tail only, these logs can be huge
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"Command failed (exit {result.returncode}): {' '.join(cmd)}\n"
+            f"----- last stderr -----\n{result.stderr[-4000:]}"
+        )
 
 
 # --------------------------------------------------------------------------
