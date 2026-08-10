@@ -1,6 +1,9 @@
 # ============================================================
 # app.py itself
 # ============================================================
+setuptools<81      # newer setuptools removed pkg_resources; AlphaPose/MotionBERT-era
+                    # packages (easydict, halpecocotools, etc.) still import it directly
+wheel
 gradio>=4.36
 numpy
 pandas
