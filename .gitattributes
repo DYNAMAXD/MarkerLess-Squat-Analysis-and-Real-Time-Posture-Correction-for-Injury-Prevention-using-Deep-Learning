@@ -4,4 +4,5 @@
 *.pt filter=lfs diff=lfs merge=lfs -text
 AlphaPose/model_files/J_regressor_h36m.npy filter=lfs diff=lfs merge=lfs -text
 AlphaPose/model_files/smpl_faces.npy filter=lfs diff=lfs merge=lfs -text
+AlphaPose/detector/yolo/data/yolov3-spp.weights filter=lfs diff=lfs merge=lfs -text
 MotionBERT/data/mesh/SMPL_NEUTRAL.pkl filter=lfs diff=lfs merge=lfs -text
