@@ -1,0 +1,13 @@
+gradio>=4.36.0
+torch
+torchvision
+opencv-python-headless
+numpy<2.0
+ultralytics
+easydict
+pyyaml
+scipy
+cython
+munkres
+tqdm
+tensorboardX
