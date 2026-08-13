@@ -9,6 +9,9 @@ numpy
 pandas
 opencv-python
 huggingface_hub
+ffmpeg
+libgl1
+libglib2.0-0
 ultralytics
 
 # ============================================================
