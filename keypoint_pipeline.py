@@ -134,7 +134,7 @@ def load_yolo():
 
 def detect_persons(yolo_model, frame_bgr, conf=0.5):
     """Returns list of [x1, y1, x2, y2, conf] boxes for class 'person' (COCO id 0)."""
-    results = yolo_model.predict(source=frame_bgr, conf=conf, classes=[0], verbose=False)
+    results = yolo_model.predict(source=frame_bgr, conf=conf, classes=[0], device="cpu", verbose=False)
     boxes = []
     for r in results:
         if r.boxes is None:
