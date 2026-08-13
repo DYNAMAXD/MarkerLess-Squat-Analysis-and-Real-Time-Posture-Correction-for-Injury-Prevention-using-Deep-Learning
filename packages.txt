@@ -1,9 +1,0 @@
-ffmpeg
-libsm6
-libxext6
-libgl1
-build-essential
-cmake
-ninja-build
-python3-dev
-libglib2.0-0
