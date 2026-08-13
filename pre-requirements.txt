@@ -17,6 +17,7 @@
 # enforces a fixed list of torch builds (2.8.0 / 2.9.1 / 2.10.0 / 2.11.0).
 # Standard GPU hardware (T4/L4/A10G) or CPU-only doesn't need this specific
 # pin -- feel free to use a newer torch there.
+numpy<2.0
 setuptools<81
 wheel
 torch==2.8.0
