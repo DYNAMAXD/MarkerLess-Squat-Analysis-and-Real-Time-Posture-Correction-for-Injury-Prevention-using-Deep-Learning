@@ -6,3 +6,4 @@ build-essential
 cmake
 ninja-build
 python3-dev
+libglib2.0-0
