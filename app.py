@@ -131,4 +131,4 @@ with gr.Blocks(title="AlphaPose + MotionBERT Keypoint Extraction") as demo:
     )
 
 if __name__ == "__main__":
-    demo.queue().launch(show_api=False)
+    demo.queue().launch(show_api=False, share=True)
