@@ -10,7 +10,7 @@ output without SSH/logs access.
 import logging
 import queue
 import traceback
-
+import spaces
 import gradio as gr
 
 from keypoint_pipeline import process_video, LOGGER
@@ -31,6 +31,10 @@ class QueueLogHandler(logging.Handler):
         except Exception:
             pass
 
+
+@spaces.GPU(duration=1)  # satisfies ZeroGPU's startup check; we force CPU inside anyway
+def _run(video_file, use_3d, det_conf):
+    return process_video(video_file, use_3d=use_3d, det_conf=det_conf)
 
 def run_pipeline(video_file, use_3d, det_conf):
     log_queue: queue.Queue = queue.Queue()
