@@ -23,4 +23,4 @@ smplx==0.1.28
 # aliases like np.bool/np.object/np.int) -- if the mesh stage fails with an
 # AttributeError from chumpy, pin numpy tighter: numpy<1.24,>=1.19 instead of
 # the numpy<2.0 above, then redeploy.
-chumpy==0.70
+chumpy==0.70 --no-build-isolation
