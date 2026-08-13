@@ -19,7 +19,6 @@ six
 terminaltables
 scipy
 matplotlib
-visdom
 tqdm
 tensorboardX
 easydict
