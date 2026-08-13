@@ -47,6 +47,7 @@ MOTIONBERT_POSE3D_CKPT = (
 )
 
 OUTPUT_DIR = ROOT / "outputs"
+
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 # --------------------------------------------------------------------------
@@ -58,8 +59,8 @@ if not LOGGER.handlers:
     _sh = logging.StreamHandler(sys.stdout)
     _sh.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s: %(message)s", "%H:%M:%S"))
     LOGGER.addHandler(_sh)
-
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    
+DEVICE = "cpu"
 
 # Halpe26 joint names, in the order AlphaPose's halpe26 config outputs them.
 HALPE26_JOINTS = [
