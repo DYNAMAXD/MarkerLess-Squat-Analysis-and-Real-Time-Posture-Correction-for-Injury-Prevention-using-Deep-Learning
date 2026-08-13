@@ -1,0 +1,26 @@
+gradio==4.44.1
+gradio_client==1.3.0
+fastapi==0.115.2
+starlette==0.40.0
+pydantic<2.10
+huggingface_hub==0.25.2
+torch
+torchvision
+opencv-python-headless
+numpy<2.0
+ultralytics
+easydict
+pyyaml
+scipy
+cython
+munkres
+tqdm
+tensorboardX
+matplotlib
+smplx==0.1.28
+# chumpy is needed to unpickle the classic SMPL_NEUTRAL.pkl (it contains chumpy
+# Ch arrays). chumpy is unmaintained and breaks on numpy>=1.24 (uses removed
+# aliases like np.bool/np.object/np.int) -- if the mesh stage fails with an
+# AttributeError from chumpy, pin numpy tighter: numpy<1.24,>=1.19 instead of
+# the numpy<2.0 above, then redeploy.
+chumpy==0.70

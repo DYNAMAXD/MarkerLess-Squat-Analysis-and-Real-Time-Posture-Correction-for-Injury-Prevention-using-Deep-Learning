@@ -1,0 +1,26 @@
+# Installed BEFORE requirements.txt (Spaces convention). torch has to be
+# importable already when pip processes any editable/native builds in
+# requirements.txt (e.g. if AlphaPose's C extensions ever get built via
+# `pip install -e ./AlphaPose`), since AlphaPose's setup.py imports
+# torch.utils.cpp_extension at build time.
+#
+# NOTE: the current keypoint_pipeline.py does NOT install or subprocess out
+# to AlphaPose/MotionBERT -- it imports their Python packages in-process via
+# sys.path.insert(...) (see load_alphapose()/load_motionbert()/
+# load_motionbert_mesh() in keypoint_pipeline.py) and does the crop/heatmap
+# decoding itself. So there's no `-e ./AlphaPose` editable install happening,
+# and no child-process GPU-grant issue to worry about on ZeroGPU. This pin is
+# kept only because it's the safest torch build for AlphaPose's C++ extension
+# headers if you ever DO switch to installing it as a package.
+#
+# IMPORTANT: this pin is only relevant if you're on ZeroGPU hardware, which
+# enforces a fixed list of torch builds (2.8.0 / 2.9.1 / 2.10.0 / 2.11.0).
+# Standard GPU hardware (T4/L4/A10G) or CPU-only doesn't need this specific
+# pin -- feel free to use a newer torch there.
+setuptools<81
+wheel
+torch==2.8.0
+torchvision==0.23.0
+numpy<2.0
+cython
+cython_bbox
