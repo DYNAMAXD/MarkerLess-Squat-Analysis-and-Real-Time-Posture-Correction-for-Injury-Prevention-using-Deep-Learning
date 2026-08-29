@@ -2,3 +2,23 @@
 AlphaPose/examples/demo/*.jpg
 .Proj1Venv
 Proj1Venv
+outputs
+./outputs
+test_videos
+./test_videos
+*.mp4
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+
+# Generated videos
+*.mp4
+
+# Gradio local files
+.gradio/
