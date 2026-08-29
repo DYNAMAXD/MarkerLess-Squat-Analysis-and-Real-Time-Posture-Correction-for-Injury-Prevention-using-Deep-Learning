@@ -150,6 +150,191 @@ def halpe26_to_h36m17(kpts_2d: np.ndarray) -> np.ndarray:
     out[9] = (out[8] + out[10]) / 2.0       # Neck/Nose ~= mid(Thorax, Head)
     return out
 
+# H36M-17 joint indices, for readability when computing angles below.
+(H36M_HIP, H36M_RHIP, H36M_RKNEE, H36M_RANKLE, H36M_LHIP, H36M_LKNEE, H36M_LANKLE,
+ H36M_SPINE, H36M_THORAX, H36M_NECK, H36M_HEAD,
+ H36M_LSHOULDER, H36M_LELBOW, H36M_LWRIST, H36M_RSHOULDER, H36M_RELBOW, H36M_RWRIST) = range(17)
+
+EXTRACTED_ANGLE_COLUMNS = [
+    "knee_valgus_L", "knee_valgus_R",
+    "head_forward_angle",
+    "squat_depth_knee_deg",
+    "sagittal_flexion_trunk",
+    "hip_angle_L", "hip_angle_R",
+    "hip_flexion_L", "hip_flexion_R",
+    "knee_flexion_L", "knee_flexion_R",
+    "ankle_dorsiflexion_proxy_L", "ankle_dorsiflexion_proxy_R",
+    "lumbar_curvature_proxy",
+]
+
+
+def _unit(v):
+    n = np.linalg.norm(v)
+    return v / n if n > 1e-6 else v
+
+
+def _angle_between(v1, v2):
+    """Unsigned angle in degrees between two 3D vectors."""
+    n1, n2 = np.linalg.norm(v1), np.linalg.norm(v2)
+    if n1 < 1e-6 or n2 < 1e-6:
+        return float("nan")
+    cos_a = np.clip(np.dot(v1, v2) / (n1 * n2), -1.0, 1.0)
+    return float(np.degrees(np.arccos(cos_a)))
+
+
+def _signed_angle_in_plane(v_from, v_to, x_axis, y_axis):
+    """Signed angle in degrees from v_from to v_to, both measured within the
+    plane spanned by orthonormal (x_axis, y_axis), as atan2(y_comp, x_comp).
+    Positive = rotation from x_axis toward y_axis."""
+    def _ang(v):
+        return np.degrees(np.arctan2(np.dot(v, y_axis), np.dot(v, x_axis)))
+    diff = _ang(v_to) - _ang(v_from)
+    while diff > 180:
+        diff -= 360
+    while diff < -180:
+        diff += 360
+    return float(diff)
+
+
+def _build_anatomical_frame(kpts_3d: np.ndarray):
+    """Derives a per-clip, gravity-aligned anatomical frame (up/right/forward)
+    from the body's own geometry, instead of assuming MotionBERT's raw output
+    axes correspond to real-world up/forward/sideways -- that correspondence
+    isn't guaranteed by the model. Assumes a static camera and that the frame
+    with the straightest knees is a standing reference (true for a squat clip
+    with a visible top position).
+
+    Returns (calib_frame_idx, up_axis, right_axis, fwd_axis), unit vectors,
+    fixed for the whole clip.
+    """
+    T = kpts_3d.shape[0]
+    knee_ext = np.array([
+        _angle_between(kpts_3d[t, H36M_LHIP] - kpts_3d[t, H36M_LKNEE],
+                        kpts_3d[t, H36M_LANKLE] - kpts_3d[t, H36M_LKNEE]) +
+        _angle_between(kpts_3d[t, H36M_RHIP] - kpts_3d[t, H36M_RKNEE],
+                        kpts_3d[t, H36M_RANKLE] - kpts_3d[t, H36M_RKNEE])
+        for t in range(T)
+    ])
+    calib = int(np.nanargmax(knee_ext))  # straightest-knee frame = standing reference
+
+    j = kpts_3d[calib]
+    up = _unit(j[H36M_THORAX] - j[H36M_HIP])
+    right_raw = j[H36M_RHIP] - j[H36M_LHIP]
+    right = _unit(right_raw - np.dot(right_raw, up) * up)  # orthogonalize vs up
+    fwd = _unit(np.cross(up, right))
+    return calib, up, right, fwd
+
+
+def compute_biomechanics_angles(kpts_3d: np.ndarray) -> list:
+    """kpts_3d: (T, 17, 3) H36M-17-order 3D joints. Returns a list of T dicts
+    keyed by EXTRACTED_ANGLE_COLUMNS.
+
+    An anatomical frame (up/right/forward) is derived once per clip from the
+    standing-most frame (see _build_anatomical_frame). Angles that are
+    naturally "zero at standing" (hip_flexion, ankle_dorsiflexion_proxy) are
+    calibrated against that same frame. hip_angle and knee_flexion are pure
+    3-point joint angles and don't need calibration -- they're camera/axis
+    independent by construction.
+
+    LIMITATIONS (please read):
+      - knee_valgus_L/R: Frontal Plane Projection Angle (FPPA), the standard
+        clinical metric for dynamic knee valgus during a squat. Positive =
+        knee deviating toward the midline (valgus), negative = varus.
+      - ankle_dorsiflexion_proxy_L/R: H36M-17 has NO foot/toe keypoint (Halpe's
+        toe/heel points are dropped in halpe26_to_h36m17), so true ankle
+        dorsiflexion (foot-to-shank angle) cannot be computed. This is a
+        proxy: shank forward lean relative to vertical, zeroed at standing.
+        It tracks dorsiflexion during a squat but is not the same measurement
+        a goniometer on the foot would give.
+      - lumbar_curvature_proxy: the H36M "Spine" joint is defined as the exact
+        midpoint of Hip and Thorax (see halpe26_to_h36m17), so it's always
+        perfectly colinear with them -- any angle computed there is
+        degenerate (always 180 deg, zero information). There is no real
+        curvature signal available without an actual mid-back/chest keypoint,
+        which nothing upstream provides. This column reports the trunk's
+        overall sagittal lean (same as sagittal_flexion_trunk) so it isn't
+        left blank -- it is NOT a measurement of spinal curvature.
+    """
+    T = kpts_3d.shape[0]
+    calib, up, right, fwd = _build_anatomical_frame(kpts_3d)
+
+    def _raw(j):
+        thigh_sag_L = _signed_angle_in_plane(up, j[H36M_LKNEE] - j[H36M_LHIP], up, fwd)
+        thigh_sag_R = _signed_angle_in_plane(up, j[H36M_RKNEE] - j[H36M_RHIP], up, fwd)
+        shank_sag_L = _signed_angle_in_plane(up, j[H36M_LANKLE] - j[H36M_LKNEE], up, fwd)
+        shank_sag_R = _signed_angle_in_plane(up, j[H36M_RANKLE] - j[H36M_RKNEE], up, fwd)
+        trunk_sag = _signed_angle_in_plane(up, j[H36M_THORAX] - j[H36M_HIP], up, fwd)
+        return thigh_sag_L, thigh_sag_R, shank_sag_L, shank_sag_R, trunk_sag
+
+    tsL_c, tsR_c, ssL_c, ssR_c, trunk_c = _raw(kpts_3d[calib])
+    hip_flex_ref_L = tsL_c - trunk_c
+    hip_flex_ref_R = tsR_c - trunk_c
+    ankle_ref_L = ssL_c
+    ankle_ref_R = ssR_c
+
+    rows = []
+    for t in range(T):
+        j = kpts_3d[t]
+        thigh_sag_L, thigh_sag_R, shank_sag_L, shank_sag_R, trunk_sag = _raw(j)
+
+        # 1. Knee medial/lateral deviation (Frontal Plane Projection Angle)
+        knee_valgus_L = _signed_angle_in_plane(j[H36M_LKNEE] - j[H36M_LHIP], j[H36M_LANKLE] - j[H36M_LKNEE], up, right)
+        knee_valgus_R = -_signed_angle_in_plane(j[H36M_RKNEE] - j[H36M_RHIP], j[H36M_RANKLE] - j[H36M_RKNEE], up, right)
+
+        # 2. Head positioning (forward head tilt, sagittal plane, 0 = head over thorax)
+        head_forward_angle = _signed_angle_in_plane(up, j[H36M_HEAD] - j[H36M_THORAX], up, fwd)
+
+        # 5. Hip angle (3D included angle, trunk vs thigh)
+        hip_angle_L = _angle_between(j[H36M_THORAX] - j[H36M_LHIP], j[H36M_LKNEE] - j[H36M_LHIP])
+        hip_angle_R = _angle_between(j[H36M_THORAX] - j[H36M_RHIP], j[H36M_RKNEE] - j[H36M_RHIP])
+
+        # 6. Hip flexion (sagittal-plane, zeroed at standing calibration frame)
+        hip_flexion_L = (thigh_sag_L - trunk_sag) - hip_flex_ref_L
+        hip_flexion_R = (thigh_sag_R - trunk_sag) - hip_flex_ref_R
+
+        # 7. Knee flexion angle (clinical convention: 0 deg = fully extended)
+        knee_flexion_L = 180.0 - _angle_between(j[H36M_LHIP] - j[H36M_LKNEE], j[H36M_LANKLE] - j[H36M_LKNEE])
+        knee_flexion_R = 180.0 - _angle_between(j[H36M_RHIP] - j[H36M_RKNEE], j[H36M_RANKLE] - j[H36M_RKNEE])
+
+        # 3. Squat depth via knee angle (avg knee flexion of both legs)
+        squat_depth_knee_deg = float(np.nanmean([knee_flexion_L, knee_flexion_R]))
+
+        # 4. Sagittal flexion of the trunk (forward lean, 0 = trunk vertical)
+        sagittal_flexion_trunk = trunk_sag
+
+        # 8. Ankle dorsiflexion proxy (shank forward lean vs vertical, zeroed at standing)
+        ankle_dorsiflexion_proxy_L = shank_sag_L - ankle_ref_L
+        ankle_dorsiflexion_proxy_R = shank_sag_R - ankle_ref_R
+
+        # 9. Lumbar curvature -- NOT actually measurable, see docstring. Duplicate of trunk lean.
+        lumbar_curvature_proxy = sagittal_flexion_trunk
+
+        rows.append({
+            "knee_valgus_L": knee_valgus_L, "knee_valgus_R": knee_valgus_R,
+            "head_forward_angle": head_forward_angle,
+            "squat_depth_knee_deg": squat_depth_knee_deg,
+            "sagittal_flexion_trunk": sagittal_flexion_trunk,
+            "hip_angle_L": hip_angle_L, "hip_angle_R": hip_angle_R,
+            "hip_flexion_L": hip_flexion_L, "hip_flexion_R": hip_flexion_R,
+            "knee_flexion_L": knee_flexion_L, "knee_flexion_R": knee_flexion_R,
+            "ankle_dorsiflexion_proxy_L": ankle_dorsiflexion_proxy_L,
+            "ankle_dorsiflexion_proxy_R": ankle_dorsiflexion_proxy_R,
+            "lumbar_curvature_proxy": lumbar_curvature_proxy,
+        })
+    return rows
+
+
+def write_extracted_angles_csv(kpts_3d: np.ndarray, out_path: str):
+    """Writes one row per frame: frame index + the 8 angle columns above."""
+    rows = compute_biomechanics_angles(kpts_3d)
+    LOGGER.info(f"Writing extracted angles CSV: {out_path}")
+    with open(out_path, "w", newline="") as f:
+        writer_csv = csv.writer(f)
+        writer_csv.writerow(["frame"] + EXTRACTED_ANGLE_COLUMNS)
+        for t, row in enumerate(rows):
+            writer_csv.writerow([t] + [row[c] for c in EXTRACTED_ANGLE_COLUMNS])
+    LOGGER.info("Extracted angles CSV written.")
+
 
 # ==========================================================================
 # Stage 1: YOLOv11 person detection
@@ -812,8 +997,10 @@ def process_video(video_path: str, use_3d: bool = True, use_mesh: bool = False,
             LOGGER.error(f"MotionBERT 3D lift failed, continuing with 2D-only CSV:\n{traceback.format_exc()}")
             kpts_3d = None
 
+    mesh_kp3d = None
     mesh_video_result = None
     if use_mesh and mesh_model is not None:
+    
         LOGGER.info("Stage 4: reconstructing SMPL mesh with MotionBERT...")
         try:
             verts, mesh_kp3d = lift_sequence_to_mesh(mesh_model, h36m_seq_norm)
@@ -860,6 +1047,16 @@ def process_video(video_path: str, use_3d: bool = True, use_mesh: bool = False,
                 for j, name in enumerate(HALPE26_JOINTS):
                     x2, y2, s2 = all_frames_2d[t, j]
                     writer_csv.writerow([t, name, x2, y2, s2])
+
+    angles_source_3d = kpts_3d if kpts_3d is not None else mesh_kp3d
+    if angles_source_3d is not None:
+        extracted_data_path = str(OUTPUT_DIR / "extracted_data.csv")
+        try:
+            write_extracted_angles_csv(angles_source_3d, extracted_data_path)
+        except Exception:
+            LOGGER.error(f"Failed to write extracted_data.csv:\n{traceback.format_exc()}")
+    else:
+        LOGGER.info("No 3D joints available (use_3d/use_mesh both off, or 3D lift failed) -- skipping extracted_data.csv.")
 
     LOGGER.info("Pipeline finished successfully.")
     return csv_path, overlay_path, mesh_video_result

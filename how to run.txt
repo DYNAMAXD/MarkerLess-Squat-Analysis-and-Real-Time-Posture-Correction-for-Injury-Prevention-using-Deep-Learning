@@ -1,0 +1,5 @@
+okay so run.py hosts a internal localhost server for the actual work
+
+and plotting_values.py is used for the actual analysis of the model 
+
+have the same libraries as in requirements_updated_v2.txt , 

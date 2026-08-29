@@ -114,13 +114,13 @@ with gr.Blocks(title="AlphaPose + MotionBERT Keypoint & Mesh Extraction") as dem
     gr.Markdown(
         "## Video -> 2D Keypoints (AlphaPose halpe26) -> 3D Lift + Mesh (MotionBERT)\n"
         "Upload a video. Output: CSV of joint positions per frame, an overlay video with "
-        "2D keypoints drawn on it, and — if enabled — a rendered SMPL mesh video."
+        "2D keypoints drawn on it, and a rendered SMPL mesh video."
     )
 
     with gr.Row():
         with gr.Column(scale=1):
             video_in = gr.Video(label="Input video", format="mp4")
-            use_3d = gr.Checkbox(value=True, label="Run MotionBERT 3D lift (adds x_3d/y_3d/z_3d to the CSV)")
+            use_3d = gr.Checkbox(value=True, label="Run MotionBERT 3D lift adds x_3d/y_3d/z_3d to the CSV")
             use_mesh = gr.Checkbox(
                 value=False,
                 label="Also reconstruct a 3D mesh (MotionBERT + SMPL) — requires SMPL asset files, see Debug Console",
@@ -133,13 +133,13 @@ with gr.Blocks(title="AlphaPose + MotionBERT Keypoint & Mesh Extraction") as dem
             video_out = gr.Video(label="Overlay video (2D keypoints)")
             mesh_out = gr.Video(label="Mesh video (only if mesh reconstruction is enabled)")
 
-    gr.Markdown("### Debug Console (live stderr/stdout equivalent — no terminal needed)")
+    gr.Markdown("### Debug Console ")
     debug_console = gr.Textbox(
         label="Debug output",
         lines=20,
         max_lines=30,
         interactive=False,
-        autoscroll=True,
+        autoscroll=False,
     )
 
     run_btn.click(
@@ -149,4 +149,7 @@ with gr.Blocks(title="AlphaPose + MotionBERT Keypoint & Mesh Extraction") as dem
     )
 
 if __name__ == "__main__":
-    demo.queue().launch(show_api=False)
+    demo.queue().launch(
+        share=True,
+        # show_api=False
+    )
