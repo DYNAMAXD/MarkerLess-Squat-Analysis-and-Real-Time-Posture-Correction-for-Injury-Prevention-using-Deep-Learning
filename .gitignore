@@ -2,8 +2,8 @@
 AlphaPose/examples/demo/*.jpg
 .Proj1Venv
 Proj1Venv
-outputs
-./outputs
+outputs/*
+./outputs/*
 test_videos
 ./test_videos
 *.mp4
