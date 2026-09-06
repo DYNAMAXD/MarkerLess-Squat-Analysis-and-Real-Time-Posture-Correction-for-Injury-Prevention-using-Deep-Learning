@@ -51,6 +51,11 @@ JOINT_NAMES = [
 
 JOINT_IDS = {JOINT_NAMES[i]: i for i in range(len(JOINT_NAMES))}
 SMPL_MODEL_DIR = 'data/mesh'
+
+SMPL_MODEL_DIR = osp.abspath(
+    osp.join(osp.dirname(__file__), '..', '..', 'data', 'mesh')
+)
+
 H36M_TO_J17 = [6, 5, 4, 1, 2, 3, 16, 15, 14, 11, 12, 13, 8, 10, 0, 7, 9]
 H36M_TO_J14 = H36M_TO_J17[:14]
 

@@ -48,6 +48,7 @@ from pathlib import Path
 import numpy as np
 import cv2
 import torch
+import os
 
 # --------------------------------------------------------------------------
 # Paths — adjust ROOT if your Space's working dir differs. Everything else
@@ -86,6 +87,50 @@ if not LOGGER.handlers:
     LOGGER.addHandler(_sh)
 
 DEVICE = "cpu"
+
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+
+def set_device(requested_device="auto"):
+    """
+    Set the computation device for the pipeline.
+
+    requested_device:
+        "auto" -> GPU if CUDA is available, otherwise CPU
+        "gpu"  -> GPU if CUDA is available, otherwise CPU
+        "cpu"  -> CPU
+    """
+    global DEVICE
+
+    requested_device = (requested_device or "auto").lower()
+
+    if requested_device == "cpu":
+        DEVICE = "cpu"
+
+    elif requested_device in ("gpu", "cuda"):
+        if torch.cuda.is_available():
+            DEVICE = "cuda"
+        else:
+            DEVICE = "cpu"
+            LOGGER.warning(
+                "GPU was requested, but CUDA is not available. Falling back to CPU."
+            )
+
+    else:  # auto
+        DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+    LOGGER.info(
+        f"Computation device selected: {DEVICE.upper()}"
+    )
+
+    if DEVICE == "cuda":
+        LOGGER.info(f"GPU: {torch.cuda.get_device_name(0)}")
+        LOGGER.info(
+            f"CUDA version available to PyTorch: {torch.version.cuda}"
+        )
+
+    return DEVICE
+
 
 # Halpe26 joint names, in the order AlphaPose's halpe26 config outputs them.
 HALPE26_JOINTS = [
@@ -351,7 +396,7 @@ def load_yolo():
 
 def detect_persons(yolo_model, frame_bgr, conf=0.5):
     """Returns list of [x1, y1, x2, y2, conf] boxes for class 'person' (COCO id 0)."""
-    results = yolo_model.predict(source=frame_bgr, conf=conf, classes=[0], device="cpu", verbose=False)
+    results = yolo_model.predict(source=frame_bgr, conf=conf, classes=[0], device=DEVICE, verbose=False)
     boxes = []
     for r in results:
         if r.boxes is None:
@@ -879,8 +924,16 @@ def draw_overlay(frame_bgr, kpts_2d_26):
 # ==========================================================================
 # Main entry point
 # ==========================================================================
-def process_video(video_path: str, use_3d: bool = True, use_mesh: bool = False,
-                   det_conf: float = 0.5, progress_cb=None):
+# def process_video(video_path: str, use_3d: bool = True, use_mesh: bool = False,
+#                    det_conf: float = 0.5, progress_cb=None):
+def process_video(
+            video_path: str,
+            use_3d: bool = True,
+            use_mesh: bool = False,
+            det_conf: float = 0.5,
+            progress_cb=None,
+            output_name=None,
+        ):
     """
     Runs the full pipeline on a video file.
 
@@ -888,11 +941,16 @@ def process_video(video_path: str, use_3d: bool = True, use_mesh: bool = False,
       mesh_video_path is None if use_mesh is False.
     Raises on any hard failure (with full traceback logged via LOGGER).
     """
-    video_path = str(video_path)
-    stem = Path(video_path).stem
-    csv_path = str(OUTPUT_DIR / f"{stem}_keypoints.csv")
-    overlay_path = str(OUTPUT_DIR / f"{stem}_overlay.mp4")
-    mesh_path = str(OUTPUT_DIR / f"{stem}_mesh.mp4")
+    # stem = Path(video_path).stem
+    stem = output_name or Path(video_path).stem
+
+    # Create a dedicated folder for this video
+    video_output_dir = OUTPUT_DIR / stem
+    video_output_dir.mkdir(parents=True, exist_ok=True)
+
+    csv_path = str(video_output_dir / f"{stem}_keypoints.csv")
+    overlay_path = str(video_output_dir / f"{stem}_overlay.mp4")
+    mesh_path = str(video_output_dir / f"{stem}_mesh.mp4")
 
     LOGGER.info(f"Opening video: {video_path}")
     cap = cv2.VideoCapture(video_path)
@@ -1049,8 +1107,8 @@ def process_video(video_path: str, use_3d: bool = True, use_mesh: bool = False,
                     writer_csv.writerow([t, name, x2, y2, s2])
 
     angles_source_3d = kpts_3d if kpts_3d is not None else mesh_kp3d
-    if angles_source_3d is not None:
-        extracted_data_path = str(OUTPUT_DIR / "extracted_data.csv")
+    if angles_source_3d is not None: 
+        extracted_data_path = str(video_output_dir / "extracted_data.csv")
         try:
             write_extracted_angles_csv(angles_source_3d, extracted_data_path)
         except Exception:

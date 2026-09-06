@@ -11,12 +11,15 @@ import logging
 import queue
 import traceback
 import threading
+import torch
+
 
 import spaces
 import gradio as gr
+import os
 
-from keypoint_pipeline import process_video, LOGGER
-
+# from keypoint_pipeline import process_video, LOGGER
+from keypoint_pipeline import process_video, LOGGER, set_device
 
 # --------------------------------------------------------------------------
 # Debug console: a logging.Handler that pushes lines into a thread-safe
@@ -34,18 +37,38 @@ class QueueLogHandler(logging.Handler):
             pass
 
 
-@spaces.GPU(duration=1)  # satisfies ZeroGPU's startup check; we force CPU inside anyway
-def _run(video_file, use_3d, use_mesh, det_conf):
-    return process_video(video_file, use_3d=use_3d, use_mesh=use_mesh, det_conf=det_conf)
+# @spaces.GPU(duration=1)  # satisfies ZeroGPU's startup check; we force CPU inside anyway
+# def _run(video_file, use_3d, use_mesh, det_conf):
+#     return process_video(video_file, use_3d=use_3d, use_mesh=use_mesh, det_conf=det_conf)
 
 
-def run_pipeline(video_file, use_3d, use_mesh, det_conf):
+# def run_pipeline(video_file, use_3d, use_mesh, det_conf):
+def run_pipeline(video_file, use_3d, use_mesh, det_conf, compute_device):
     log_queue: queue.Queue = queue.Queue()
     handler = QueueLogHandler(log_queue)
     handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s: %(message)s", "%H:%M:%S"))
+    # LOGGER.addHandler(handler)
+
+    # console_text = ""
+    
     LOGGER.addHandler(handler)
 
-    console_text = ""
+    selected_device = set_device(compute_device)
+
+    console_text = (
+        f"Selected compute device: {compute_device.upper()}\n"
+        f"Actual compute device: {selected_device.upper()}\n"
+    )
+
+    if selected_device == "cuda":
+        console_text += (
+            f"GPU: {torch.cuda.get_device_name(0)}\n"
+        )
+    else:
+        console_text += "GPU unavailable or CPU explicitly selected.\n"
+
+    console_text += "\n"
+
 
     def flush_queue():
         nonlocal console_text
@@ -65,23 +88,45 @@ def run_pipeline(video_file, use_3d, use_mesh, det_conf):
     console_text += f"Options: 3D lift={use_3d}, mesh reconstruction={use_mesh}, det_conf={det_conf}\n"
     if use_mesh:
         console_text += (
-            "Mesh reconstruction needs SMPL asset files (SMPL_NEUTRAL.pkl, smpl_mean_params.npz, "
-            "J_regressor_extra.npy, J_regressor_h36m_correct.npy) in MotionBERT/data/mesh/ — "
-            "if those aren't there yet, this run will fail fast with a clear message below "
-            "instead of grinding through the whole video first.\n"
+            # "Mesh reconstruction needs SMPL asset files (SMPL_NEUTRAL.pkl, smpl_mean_params.npz, "
+            # "J_regressor_extra.npy, J_regressor_h36m_correct.npy) in MotionBERT/data/mesh/ — "
+            # "if those aren't there yet, this run will fail fast with a clear message below "
+            # "instead of grinding through the whole video first.\n"
+            "\n"
         )
     yield console_text, None, None, None
 
     result_holder = {}
 
+    # def worker():
+    #     try:
+    #         csv_path, overlay_path, mesh_path = process_video(
+    #             video_file, use_3d=use_3d, use_mesh=use_mesh, det_conf=det_conf
+    #         )
+    #         result_holder["csv"] = csv_path
+    #         result_holder["video"] = overlay_path
+    #         result_holder["mesh"] = mesh_path
+    #     except Exception:
+    #         result_holder["error"] = traceback.format_exc()
+
+
     def worker():
         try:
             csv_path, overlay_path, mesh_path = process_video(
-                video_file, use_3d=use_3d, use_mesh=use_mesh, det_conf=det_conf
+                video_file,
+                use_3d=use_3d,
+                use_mesh=use_mesh,
+                det_conf=det_conf
             )
+
             result_holder["csv"] = csv_path
             result_holder["video"] = overlay_path
             result_holder["mesh"] = mesh_path
+
+            LOGGER.info(f"CSV returned to UI: {csv_path}")
+            LOGGER.info(f"Overlay returned to UI: {overlay_path}")
+            LOGGER.info(f"Mesh returned to UI: {mesh_path}")
+
         except Exception:
             result_holder["error"] = traceback.format_exc()
 
@@ -94,6 +139,14 @@ def run_pipeline(video_file, use_3d, use_mesh, det_conf):
         t.join(timeout=0.3)
 
     flush_queue()  # final drain
+
+    if "error" not in result_holder:
+        console_text += (
+            f"\nCSV: {result_holder.get('csv')}\n"
+            f"Overlay: {result_holder.get('video')}\n"
+            f"Mesh: {result_holder.get('mesh')}\n"
+        )
+
 
     if "error" in result_holder:
         console_text += "\n=== PIPELINE FAILED ===\n" + result_holder["error"] + "\n"
@@ -120,6 +173,12 @@ with gr.Blocks(title="AlphaPose + MotionBERT Keypoint & Mesh Extraction") as dem
     with gr.Row():
         with gr.Column(scale=1):
             video_in = gr.Video(label="Input video", format="mp4")
+            compute_device = gr.Radio(
+                choices=["auto", "gpu", "cpu"],
+                value="auto",
+                label="Compute Device",
+                info="Auto uses GPU when CUDA is available; otherwise CPU."
+            )
             use_3d = gr.Checkbox(value=True, label="Run MotionBERT 3D lift adds x_3d/y_3d/z_3d to the CSV")
             use_mesh = gr.Checkbox(
                 value=False,
@@ -130,8 +189,18 @@ with gr.Blocks(title="AlphaPose + MotionBERT Keypoint & Mesh Extraction") as dem
 
         with gr.Column(scale=1):
             csv_out = gr.File(label="Keypoints CSV")
-            video_out = gr.Video(label="Overlay video (2D keypoints)")
-            mesh_out = gr.Video(label="Mesh video (only if mesh reconstruction is enabled)")
+            # video_out = gr.Video(label="Overlay video (2D keypoints)")
+            # mesh_out = gr.Video(label="Mesh video (only if mesh reconstruction is enabled)")
+
+            video_out = gr.Video(
+                label="Overlay video (2D keypoints)",
+                format="mp4"
+            )
+
+            mesh_out = gr.Video(
+                label="Mesh video (only if mesh reconstruction is enabled)",
+                format="mp4"
+            )
 
     gr.Markdown("### Debug Console ")
     debug_console = gr.Textbox(
@@ -142,14 +211,31 @@ with gr.Blocks(title="AlphaPose + MotionBERT Keypoint & Mesh Extraction") as dem
         autoscroll=False,
     )
 
+    # run_btn.click(
+    #     fn=run_pipeline,
+    #     inputs=[video_in, use_3d, use_mesh, det_conf],
+    #     outputs=[debug_console, csv_out, video_out, mesh_out],
+    # )
+
     run_btn.click(
         fn=run_pipeline,
-        inputs=[video_in, use_3d, use_mesh, det_conf],
-        outputs=[debug_console, csv_out, video_out, mesh_out],
+        inputs=[
+            video_in,
+            use_3d,
+            use_mesh,
+            det_conf,
+            compute_device,
+        ],
+        outputs=[
+            debug_console,
+            csv_out,
+            video_out,
+            mesh_out,
+        ],
     )
 
 if __name__ == "__main__":
     demo.queue().launch(
         share=True,
-        # show_api=False
+        # show_api=True
     )

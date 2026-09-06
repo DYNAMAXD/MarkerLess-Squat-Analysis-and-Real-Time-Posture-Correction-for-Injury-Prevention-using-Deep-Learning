@@ -22,3 +22,5 @@ venv/
 
 # Gradio local files
 .gradio/
+
+thingsDone.txt
