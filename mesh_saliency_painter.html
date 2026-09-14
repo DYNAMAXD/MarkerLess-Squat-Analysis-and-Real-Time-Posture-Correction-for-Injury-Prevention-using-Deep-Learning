@@ -656,8 +656,8 @@
     if (isRotating){
       const dx = e.clientX - lastX, dy = e.clientY - lastY;
       lastX = e.clientX; lastY = e.clientY;
-      sphTheta -= dx * 0.006;
-      sphPhi = Math.min(Math.PI - 0.08, Math.max(0.08, sphPhi - dy * 0.006));
+      sphTheta += dx * 0.006;
+      sphPhi = Math.min(Math.PI - 0.08, Math.max(0.08, sphPhi + dy * 0.006));
       updateCameraFromSpherical();
       return;
     }
