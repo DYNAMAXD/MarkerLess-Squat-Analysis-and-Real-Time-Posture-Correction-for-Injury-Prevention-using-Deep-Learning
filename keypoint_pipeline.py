@@ -269,6 +269,264 @@ def _build_anatomical_frame(kpts_3d: np.ndarray):
     fwd = _unit(np.cross(up, right))
     return calib, up, right, fwd
 
+# ==========================================================================
+# Center of Mass calculations
+# ==========================================================================
+
+# Approximate body segment mass fractions.
+# These are a starting anthropometric model, not subject-specific measurements.
+# Bilateral segments are represented separately below.
+SEGMENT_MASS_FRACTIONS = {
+    "head": 0.0694,
+    "trunk": 0.4346,
+
+    "upper_arm_L": 0.0271,
+    "upper_arm_R": 0.0271,
+
+    "forearm_L": 0.0162,
+    "forearm_R": 0.0162,
+
+    "hand_L": 0.0061,
+    "hand_R": 0.0061,
+
+    "thigh_L": 0.1416,
+    "thigh_R": 0.1416,
+
+    "shank_L": 0.0433,
+    "shank_R": 0.0433,
+
+    "foot_L": 0.0137,
+    "foot_R": 0.0137,
+}
+
+
+def _segment_com(p1, p2, fraction=0.5):
+    """
+    Return a point along the segment p1 -> p2.
+
+    fraction=0.5 means midpoint.
+    """
+    return p1 + fraction * (p2 - p1)
+
+
+def compute_keypoint_com(kpts_3d: np.ndarray) -> np.ndarray:
+    """
+    Estimate whole-body COM from H36M-17 keypoints using an
+    anthropometric segment-mass model.
+
+    kpts_3d:
+        (T, 17, 3)
+
+    Returns:
+        (T, 3)
+    """
+
+    T = kpts_3d.shape[0]
+    com_all = np.full((T, 3), np.nan, dtype=np.float32)
+
+    for t in range(T):
+        j = kpts_3d[t]
+
+        segment_points = []
+        segment_masses = []
+
+        def add_segment(name, p1, p2, fraction=0.5):
+            mass = SEGMENT_MASS_FRACTIONS[name]
+
+            if np.all(np.isfinite(p1)) and np.all(np.isfinite(p2)):
+                com = _segment_com(p1, p2, fraction)
+                segment_points.append(com)
+                segment_masses.append(mass)
+
+        # -------------------------
+        # Head
+        # -------------------------
+        # H36M has no separate head-neck pair suitable for a detailed segment,
+        # so approximate head COM at the Head keypoint.
+        if np.all(np.isfinite(j[H36M_HEAD])):
+            segment_points.append(j[H36M_HEAD])
+            segment_masses.append(SEGMENT_MASS_FRACTIONS["head"])
+
+        # -------------------------
+        # Trunk
+        # -------------------------
+        add_segment(
+            "trunk",
+            j[H36M_HIP],
+            j[H36M_THORAX],
+            fraction=0.50,
+        )
+
+        # -------------------------
+        # Left arm
+        # -------------------------
+        add_segment(
+            "upper_arm_L",
+            j[H36M_LSHOULDER],
+            j[H36M_LELBOW],
+            fraction=0.50,
+        )
+
+        add_segment(
+            "forearm_L",
+            j[H36M_LELBOW],
+            j[H36M_LWRIST],
+            fraction=0.50,
+        )
+
+        # H36M has no finger/hand keypoints, so use wrist as hand location.
+        if np.all(np.isfinite(j[H36M_LWRIST])):
+            segment_points.append(j[H36M_LWRIST])
+            segment_masses.append(SEGMENT_MASS_FRACTIONS["hand_L"])
+
+        # -------------------------
+        # Right arm
+        # -------------------------
+        add_segment(
+            "upper_arm_R",
+            j[H36M_RSHOULDER],
+            j[H36M_RELBOW],
+            fraction=0.50,
+        )
+
+        add_segment(
+            "forearm_R",
+            j[H36M_RELBOW],
+            j[H36M_RWRIST],
+            fraction=0.50,
+        )
+
+        if np.all(np.isfinite(j[H36M_RWRIST])):
+            segment_points.append(j[H36M_RWRIST])
+            segment_masses.append(SEGMENT_MASS_FRACTIONS["hand_R"])
+
+        # -------------------------
+        # Left leg
+        # -------------------------
+        add_segment(
+            "thigh_L",
+            j[H36M_LHIP],
+            j[H36M_LKNEE],
+            fraction=0.50,
+        )
+
+        add_segment(
+            "shank_L",
+            j[H36M_LKNEE],
+            j[H36M_LANKLE],
+            fraction=0.50,
+        )
+
+        # No foot keypoint in H36M17, so approximate foot COM at ankle.
+        if np.all(np.isfinite(j[H36M_LANKLE])):
+            segment_points.append(j[H36M_LANKLE])
+            segment_masses.append(SEGMENT_MASS_FRACTIONS["foot_L"])
+
+        # -------------------------
+        # Right leg
+        # -------------------------
+        add_segment(
+            "thigh_R",
+            j[H36M_RHIP],
+            j[H36M_RKNEE],
+            fraction=0.50,
+        )
+
+        add_segment(
+            "shank_R",
+            j[H36M_RKNEE],
+            j[H36M_RANKLE],
+            fraction=0.50,
+        )
+
+        if np.all(np.isfinite(j[H36M_RANKLE])):
+            segment_points.append(j[H36M_RANKLE])
+            segment_masses.append(SEGMENT_MASS_FRACTIONS["foot_R"])
+
+        if not segment_points:
+            continue
+
+        segment_points = np.asarray(segment_points, dtype=np.float32)
+        segment_masses = np.asarray(segment_masses, dtype=np.float32)
+
+        # Renormalize in case some segments were unavailable.
+        segment_masses /= segment_masses.sum()
+
+        com_all[t] = np.sum(
+            segment_points * segment_masses[:, None],
+            axis=0,
+        )
+
+    return com_all
+
+
+def compute_mesh_com(verts: np.ndarray) -> np.ndarray:
+    """
+    Estimate mesh COM as the geometric centroid of the SMPL vertices.
+
+    verts:
+        (T, 6890, 3)
+
+    Returns:
+        (T, 3)
+
+    IMPORTANT:
+        This is a geometric centroid assuming approximately uniform
+        mass density across the mesh. It is NOT a subject-specific
+        physiological COM.
+    """
+
+    if verts is None:
+        return None
+
+    valid = np.isfinite(verts).all(axis=2)
+
+    com_all = np.full((verts.shape[0], 3), np.nan, dtype=np.float32)
+
+    for t in range(verts.shape[0]):
+        if np.any(valid[t]):
+            com_all[t] = np.mean(
+                verts[t, valid[t]],
+                axis=0,
+            )
+
+    return com_all
+
+
+def compute_final_com(com_keypoints: np.ndarray,
+                      com_mesh: np.ndarray) -> np.ndarray:
+    """
+    Final COM = arithmetic midpoint of keypoint-based COM and mesh COM.
+
+    If only one source exists, use that source.
+    """
+
+    if com_keypoints is None:
+        return com_mesh
+
+    if com_mesh is None:
+        return com_keypoints
+
+    final = np.full_like(com_keypoints, np.nan)
+
+    for t in range(com_keypoints.shape[0]):
+        kp = com_keypoints[t]
+        mesh = com_mesh[t]
+
+        kp_valid = np.all(np.isfinite(kp))
+        mesh_valid = np.all(np.isfinite(mesh))
+
+        if kp_valid and mesh_valid:
+            final[t] = 0.5 * (kp + mesh)
+
+        elif kp_valid:
+            final[t] = kp
+
+        elif mesh_valid:
+            final[t] = mesh
+
+    return final
+
 
 def compute_biomechanics_angles(kpts_3d: np.ndarray) -> list:
     """kpts_3d: (T, 17, 3) H36M-17-order 3D joints. Returns a list of T dicts
@@ -369,17 +627,81 @@ def compute_biomechanics_angles(kpts_3d: np.ndarray) -> list:
     return rows
 
 
-def write_extracted_angles_csv(kpts_3d: np.ndarray, out_path: str):
-    """Writes one row per frame: frame index + the 8 angle columns above."""
+def write_extracted_angles_csv(
+        kpts_3d: np.ndarray,
+        out_path: str,
+        mesh_verts: np.ndarray = None,
+    ):
+    """
+    Writes one row per frame containing:
+
+        frame
+        biomechanical angles
+        com_keypoints
+        com_mesh
+        com_final
+
+    COM columns are stored as:
+        "x,y,z"
+
+    so each CSV row still corresponds to exactly one frame.
+    """
+
     rows = compute_biomechanics_angles(kpts_3d)
-    LOGGER.info(f"Writing extracted angles CSV: {out_path}")
+
+    com_keypoints = compute_keypoint_com(kpts_3d)
+
+    com_mesh = None
+    if mesh_verts is not None:
+        com_mesh = compute_mesh_com(mesh_verts)
+
+    com_final = compute_final_com(
+        com_keypoints,
+        com_mesh,
+    )
+
+    LOGGER.info(
+        f"Writing extracted angles + COM CSV: {out_path}"
+    )
+
     with open(out_path, "w", newline="") as f:
         writer_csv = csv.writer(f)
-        writer_csv.writerow(["frame"] + EXTRACTED_ANGLE_COLUMNS)
-        for t, row in enumerate(rows):
-            writer_csv.writerow([t] + [row[c] for c in EXTRACTED_ANGLE_COLUMNS])
-    LOGGER.info("Extracted angles CSV written.")
 
+        columns = (
+            ["frame"]
+            + EXTRACTED_ANGLE_COLUMNS
+            + [
+                "com_keypoints",
+                "com_mesh",
+                "com_final",
+            ]
+        )
+
+        writer_csv.writerow(columns)
+
+        def format_com(com):
+            if com is None:
+                return ""
+
+            if not np.all(np.isfinite(com)):
+                return ""
+
+            return f"{com[0]:.6f},{com[1]:.6f},{com[2]:.6f}"
+
+        for t, row in enumerate(rows):
+            writer_csv.writerow(
+                [
+                    t,
+                    *[row[c] for c in EXTRACTED_ANGLE_COLUMNS],
+                    format_com(com_keypoints[t]),
+                    format_com(com_mesh[t]) if com_mesh is not None else "",
+                    format_com(com_final[t]),
+                ]
+            )
+
+    LOGGER.info(
+        "Extracted angles + COM CSV written."
+    )
 
 # ==========================================================================
 # Stage 1: YOLOv11 person detection
@@ -1055,8 +1377,12 @@ def process_video(
             LOGGER.error(f"MotionBERT 3D lift failed, continuing with 2D-only CSV:\n{traceback.format_exc()}")
             kpts_3d = None
 
+    # mesh_kp3d = None
+    # mesh_video_result = None
+
     mesh_kp3d = None
     mesh_video_result = None
+    verts = None
     if use_mesh and mesh_model is not None:
     
         LOGGER.info("Stage 4: reconstructing SMPL mesh with MotionBERT...")
@@ -1106,15 +1432,47 @@ def process_video(
                     x2, y2, s2 = all_frames_2d[t, j]
                     writer_csv.writerow([t, name, x2, y2, s2])
 
-    angles_source_3d = kpts_3d if kpts_3d is not None else mesh_kp3d
-    if angles_source_3d is not None: 
-        extracted_data_path = str(video_output_dir / "extracted_data.csv")
+    # angles_source_3d = kpts_3d if kpts_3d is not None else mesh_kp3d
+    # if angles_source_3d is not None: 
+    #     extracted_data_path = str(video_output_dir / "extracted_data.csv")
+    #     try:
+    #         write_extracted_angles_csv(angles_source_3d, extracted_data_path)
+
+    #     except Exception:
+    #         LOGGER.error(f"Failed to write extracted_data.csv:\n{traceback.format_exc()}")
+    # else:
+    #     LOGGER.info("No 3D joints available (use_3d/use_mesh both off, or 3D lift failed) -- skipping extracted_data.csv.")
+    angles_source_3d = (
+        kpts_3d
+        if kpts_3d is not None
+        else mesh_kp3d
+    )
+
+    if angles_source_3d is not None:
+        extracted_data_path = str(
+            video_output_dir / "extracted_data.csv"
+        )
+
         try:
-            write_extracted_angles_csv(angles_source_3d, extracted_data_path)
+            write_extracted_angles_csv(
+                angles_source_3d,
+                extracted_data_path,
+                mesh_verts=verts if use_mesh and mesh_video_result is not None else None,
+            )
+
         except Exception:
-            LOGGER.error(f"Failed to write extracted_data.csv:\n{traceback.format_exc()}")
+            LOGGER.error(
+                f"Failed to write extracted_data.csv:\n"
+                f"{traceback.format_exc()}"
+            )
+
     else:
-        LOGGER.info("No 3D joints available (use_3d/use_mesh both off, or 3D lift failed) -- skipping extracted_data.csv.")
+        LOGGER.info(
+            "No 3D joints available "
+            "(use_3d/use_mesh both off, or 3D lift failed) "
+            "-- skipping extracted_data.csv."
+        )
+
 
     LOGGER.info("Pipeline finished successfully.")
     return csv_path, overlay_path, mesh_video_result
