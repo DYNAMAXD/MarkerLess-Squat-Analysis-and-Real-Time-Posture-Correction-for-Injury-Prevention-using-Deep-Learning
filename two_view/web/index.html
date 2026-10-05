@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Squat Studio</title>
+<style>
+:root{
+  --bg:#0B0B0B; --panel:#1F1F1F; --panel2:#161616; --line:#333; --text:#F5F5F5; --muted:#9A9A9A;
+  --accent:#FF7C00; --accent-soft:rgba(255,124,0,.14); --ok:#4cd07d; --warn:#f2c14e; --bad:#ff5c5c; --front:#4DA3FF;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.page{max-width:1750px;margin:auto;padding:22px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap}
+header h1{margin:0;font-size:28px;letter-spacing:.2px}
+header h1 span{color:var(--accent)}
+header p{margin:2px 0 0;color:var(--muted)}
+.layout{display:grid;grid-template-columns:370px minmax(0,1fr);gap:20px;align-items:start}
+@media(max-width:1050px){.layout{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.title{font-size:17px;font-weight:700;margin:0 0 12px}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;color:var(--muted);margin:14px 0 6px}
+.drop{border:1.5px dashed var(--line);background:var(--bg);border-radius:10px;padding:16px 12px;text-align:center;cursor:pointer;transition:.15s;margin-bottom:10px}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop.has{border-style:solid;border-color:var(--accent)}
+.drop b{display:block;font-size:14px}
+.drop small{color:var(--muted);word-break:break-all}
+.drop .ico{font-size:22px;display:block;margin-bottom:2px}
+input[type=text],select{width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);outline:none;font:inherit}
+input[type=text]:focus,select:focus{border-color:var(--text)}
+input::placeholder{color:#777}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{font:inherit;cursor:pointer}
+.btn{width:100%;margin-top:14px;padding:12px;border-radius:10px;border:0;background:var(--accent);color:#111;font-weight:800;font-size:15px}
+.btn:hover{filter:brightness(1.1)} .btn:disabled{background:#444;color:#888;cursor:not-allowed}
+.ghost{background:#333;border:1px solid var(--line);color:var(--text);padding:7px 12px;border-radius:8px}
+.ghost:hover{background:var(--accent);color:#111;border-color:var(--accent)}
+.chk{display:flex;align-items:center;gap:8px;margin:10px 0 0;color:var(--muted);font-size:13px}
+details{margin-top:12px;color:var(--muted)} summary{cursor:pointer;font-size:13px}
+.bar{height:8px;background:var(--bg);border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+.recent{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;cursor:pointer;border:1px solid transparent}
+.recent:hover{background:var(--panel2)} .recent.on{background:var(--accent-soft);border-color:var(--accent)}
+.recent .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recent small{color:var(--muted);display:block}
+.recent .x{background:none;border:0;color:var(--muted);font-size:16px}.recent .x:hover{color:var(--bad)}
+.tag{font-size:11px;padding:2px 7px;border-radius:20px;background:#333;color:var(--muted)}
+.tag.ok{background:rgba(76,208,125,.15);color:var(--ok)} .tag.run{background:var(--accent-soft);color:var(--accent)} .tag.err{background:rgba(255,92,92,.15);color:var(--bad)}
+.hero{text-align:center;padding:50px 20px}
+.hero h2{font-size:24px;margin:0 0 8px}.hero p{color:var(--muted);max-width:560px;margin:6px auto}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:26px;text-align:left}
+@media(max-width:700px){.steps{grid-template-columns:1fr}}
+.steps div{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px}
+.steps b{color:var(--accent);font-size:20px}
+.stepper{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 16px}
+.stp{flex:1;min-width:120px;padding:10px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font-size:13px}
+.stp.on{border-color:var(--accent);color:var(--text);background:var(--accent-soft)} .stp.done{color:var(--ok);border-color:#2c5a3d}
+pre{background:#050505;border:1px solid var(--line);color:#c9f7d3;padding:12px;border-radius:8px;max-height:340px;overflow:auto;font-size:12px;white-space:pre-wrap;margin:12px 0 0}
+.videos{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:800px){.videos{grid-template-columns:1fr}}
+.vbox{background:#000;border:1px solid var(--line);border-radius:10px;overflow:hidden;position:relative}
+.vbox video{width:100%;display:block;background:#000;aspect-ratio:16/9;object-fit:contain}
+.vbox .vt{position:absolute;left:10px;top:8px;background:rgba(0,0,0,.65);padding:2px 9px;border-radius:20px;font-size:12px;font-weight:700}
+.vbox .novid{aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;color:var(--muted);text-align:center;padding:20px}
+.transport{display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+.transport input[type=range]{flex:1;min-width:200px;accent-color:var(--accent)}
+.play{width:42px;height:42px;border-radius:50%;border:0;background:var(--accent);color:#111;font-size:16px;font-weight:800}
+.time{font-variant-numeric:tabular-nums;color:var(--muted);min-width:110px;text-align:right}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.chip{padding:4px 11px;border-radius:20px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:12px}
+.chip:hover,.chip.on{border-color:var(--accent);background:var(--accent-soft)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-top:14px}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.card small{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.card b{font-size:21px;font-variant-numeric:tabular-nums}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.sync{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;color:var(--muted);font-size:13px}
+.sync .tag{font-size:12px}
+.grp{margin-top:6px} .grp h4{margin:12px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:7px}
+.met{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:13px;cursor:pointer}
+.met input{accent-color:var(--accent)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;position:sticky;top:0;background:var(--panel)}
+th:first-child,td:first-child{text-align:left}
+tbody tr{cursor:pointer} tbody tr:hover{background:var(--panel2)} tbody tr.on{background:var(--accent-soft)}
+.scroll{overflow:auto;max-height:300px}
+.dl{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+a.dl-a{color:var(--text);text-decoration:none;padding:7px 12px;border:1px solid var(--line);border-radius:8px;background:#2a2a2a;font-size:13px}
+a.dl-a:hover{border-color:var(--accent);color:var(--accent)}
+.err{border-color:var(--bad)} .note{color:var(--muted);font-size:12px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div>
+      <h1>Squat <span>Studio</span></h1>
+      <p>Two-camera markerless squat analysis &mdash; upload front + side video, we sync them and show the angles.</p>
+    </div>
+    <span class="tag" id="servTag">connecting&hellip;</span>
+  </header>
+
+  <div class="layout">
+    <!-- ================= LEFT ================= -->
+    <aside>
+      <div class="panel" id="newPanel">
+        <div class="title">New analysis</div>
+        <div class="drop" id="dropF"><span class="ico">&#127909;</span><b>Front video</b><small id="nameF">Click or drop a file</small></div>
+        <input type="file" id="fileF" accept="video/*" hidden>
+        <div class="drop" id="dropS"><span class="ico">&#127909;</span><b>Side video</b><small id="nameS">Click or drop a file</small></div>
+        <input type="file" id="fileS" accept="video/*" hidden>
+        <div class="two">
+          <div><div class="label">Subject (optional)</div><input type="text" id="subject" placeholder="e.g. P01"></div>
+          <div><div class="label">Squat type (optional)</div><input type="text" id="label" list="labels" placeholder="e.g. correct"></div>
+        </div>
+        <datalist id="labels"><option>correct</option><option>knees_in</option><option>forward_lean</option><option>shallow</option><option>heels_up</option></datalist>
+        <div class="label">Compute device</div>
+        <select id="device"><option value="auto">Auto (GPU if available)</option><option value="cpu">CPU</option><option value="gpu">GPU</option></select>
+        <label class="chk"><input type="checkbox" id="syncOnly"> Only check the clap sync (fast, no pose models)</label>
+        <details><summary>Use files already on this PC instead</summary>
+          <div class="label">Front video path</div><input type="text" id="pathF" placeholder="C:\videos\front.MP4">
+          <div class="label">Side video path</div><input type="text" id="pathS" placeholder="C:\videos\side.MP4">
+        </details>
+        <button class="btn" id="go" disabled>Analyse</button>
+        <div id="upBar" class="hidden" style="margin-top:12px"><div class="bar"><i id="upFill"></i></div><div class="note" id="upTxt"></div></div>
+        <div id="formErr" class="note" style="color:var(--bad);margin-top:8px"></div>
+      </div>
+
+      <div class="panel hidden" id="ctrlPanel">
+        <div class="title">Graph controls</div>
+        <div id="metricList"></div>
+        <div class="label">Smoothing <span id="smVal" class="note"></span></div>
+        <input type="range" id="smooth" min="1" max="31" step="2" value="1" style="width:100%;accent-color:var(--accent)">
+        <label class="chk"><input type="checkbox" id="showReps" checked> Shade each squat rep</label>
+      </div>
+
+      <div class="panel">
+        <div class="title">Recent analyses</div>
+        <div id="recent" class="note">Nothing yet.</div>
+      </div>
+    </aside>
+
+    <!-- ================= MAIN ================= -->
+    <main>
+      <div class="panel hero" id="hero">
+        <h2>Record. Upload. Explore.</h2>
+        <p>Film one squat set from the front and one from the side, with a clap at the start of both. The clap lines the two videos up.</p>
+        <div class="steps">
+          <div><b>1</b><br><strong>Upload</strong><br><span class="note">Front + side video of the same set.</span></div>
+          <div><b>2</b><br><strong>We analyse</strong><br><span class="note">Clap sync, pose tracking, 3D angles, rep detection.</span></div>
+          <div><b>3</b><br><strong>Explore</strong><br><span class="note">Synced videos, click-to-jump graphs, per-rep table.</span></div>
+        </div>
+      </div>
+
+      <div class="panel hidden" id="runPanel">
+        <div class="title" id="runTitle">Analysing&hellip;</div>
+        <div class="stepper" id="stepper"></div>
+        <div class="bar"><i id="runFill"></i></div>
+        <div class="note" id="runTxt" style="margin-top:6px"></div>
+        <details open style="margin-top:10px"><summary>Live log</summary><pre id="log"></pre></details>
+      </div>
+
+      <div id="results" class="hidden">
+        <div class="panel" id="syncPanel"></div>
+        <div class="panel" id="vidPanel">
+          <div class="videos">
+            <div class="vbox"><span class="vt" style="color:var(--front)">FRONT</span><video id="vF" muted playsinline preload="auto"></video><div class="novid hidden" id="noF"></div></div>
+            <div class="vbox"><span class="vt" style="color:var(--accent)">SIDE</span><video id="vS" muted playsinline preload="auto"></video><div class="novid hidden" id="noS"></div></div>
+          </div>
+          <div class="transport">
+            <button class="play" id="play" title="Play / pause">&#9654;</button>
+            <input type="range" id="scrub" min="0" max="1" step="0.01" value="0">
+            <span class="time" id="tlabel">0.00 / 0.00 s</span>
+            <select id="speed" style="width:auto"><option value="0.25">0.25&times;</option><option value="0.5">0.5&times;</option><option value="1" selected>1&times;</option><option value="2">2&times;</option></select>
+          </div>
+          <div class="chips" id="repChips"></div>
+          <div class="cards" id="cards"></div>
+        </div>
+        <div class="panel">
+          <div class="title">Angle graphs <span class="note" style="font-weight:400">&mdash; click anywhere on a curve to jump both videos to that moment</span></div>
+          <div id="plot" style="height:430px"></div>
+        </div>
+        <div class="panel">
+          <div class="title">Per-rep summary <span class="note" style="font-weight:400">&mdash; one row per squat, front and side combined</span></div>
+          <div class="scroll"><table id="repTable"></table></div>
+          <div class="title" style="margin-top:18px">Downloads</div>
+          <div class="dl" id="downloads"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------- helpers
+const $ = id => document.getElementById(id);
+const FRONT_COL = ["#4DA3FF","#7BD88F","#B58CFF","#4FD1C5","#FFD166","#8EC5FF"];
+const SIDE_COL  = ["#FF7C00","#FF5C8A","#F9C74F","#E4572E","#C77DFF","#FFA94D"];
+const DEFAULT_SEL = {front:["knee_valgus_L","knee_valgus_R","squat_depth_knee_deg"], side:["sagittal_flexion_trunk","hip_flexion_L","knee_flexion_L"]};
+const pretty = k => k.replace(/_/g," ");
+const fmt = (v,d=1) => (v===null||v===undefined||!isFinite(v)) ? "—" : Number(v).toFixed(d);
+const clamp = (x,a,b) => Math.max(a,Math.min(b,x));
+const api = async (url,opt) => { const r = await fetch(url,opt); if(!r.ok){ let m=r.statusText; try{m=(await r.json()).error||m}catch(e){} throw new Error(m);} return r; };
+
+let S = null;            // state of the open analysis
+let pollTimer = null, currentName = null;
+
+function loadScript(url){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=url; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+const plotlyReady = loadScript('/plotly.js').catch(()=>loadScript('https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js'));
+
+// ---------------------------------------------------------------- upload form
+const files = {F:null,S:null};
+function wireDrop(k){
+  const drop=$('drop'+k), inp=$('file'+k);
+  drop.onclick=()=>inp.click();
+  inp.onchange=()=>setFile(k,inp.files[0]);
+  ['dragenter','dragover'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add('over')}));
+  ['dragleave','drop'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove('over')}));
+  drop.addEventListener('drop',ev=>{ if(ev.dataTransfer.files[0]) setFile(k,ev.dataTransfer.files[0]); });
+}
+function setFile(k,f){ files[k]=f; $('name'+k).textContent = f ? `${f.name}  (${(f.size/1048576).toFixed(0)} MB)` : 'Click or drop a file'; $('drop'+k).classList.toggle('has',!!f); checkForm(); }
+function checkForm(){ const ok = (files.F||$('pathF').value.trim()) && (files.S||$('pathS').value.trim()); $('go').disabled=!ok; }
+['F','S'].forEach(wireDrop); $('pathF').oninput=checkForm; $('pathS').oninput=checkForm;
+
+$('go').onclick = () => {
+  $('formErr').textContent='';
+  const fd = new FormData();
+  if(files.F) fd.append('front',files.F); else fd.append('front_path',$('pathF').value);
+  if(files.S) fd.append('side',files.S);  else fd.append('side_path',$('pathS').value);
+  fd.append('subject',$('subject').value); fd.append('label',$('label').value); fd.append('device',$('device').value);
+  fd.append('sync_only',$('syncOnly').checked?'1':'0');
+  const xhr = new XMLHttpRequest(); xhr.open('POST','/api/jobs');
+  $('go').disabled=true; $('upBar').classList.remove('hidden');
+  xhr.upload.onprogress = e => { if(e.lengthComputable){ $('upFill').style.width=(100*e.loaded/e.total)+'%'; $('upTxt').textContent=`Uploading… ${(e.loaded/1048576).toFixed(0)} / ${(e.total/1048576).toFixed(0)} MB`; } };
+  xhr.onload = () => {
+    $('upBar').classList.add('hidden'); checkForm();
+    let j={}; try{j=JSON.parse(xhr.responseText)}catch(e){}
+    if(xhr.status!==200){ $('formErr').textContent=j.error||'Upload failed.'; return; }
+    openJob(j.name, true); refreshRecent();
+  };
+  xhr.onerror = () => { $('upBar').classList.add('hidden'); checkForm(); $('formErr').textContent='Could not reach the server.'; };
+  xhr.send(fd);
+};
+
+// ---------------------------------------------------------------- recent list
+async function refreshRecent(){
+  try{
+    const rows = await (await api('/api/jobs')).json();
+    $('servTag').textContent='server online'; $('servTag').className='tag ok';
+    if(!rows.length){ $('recent').textContent='Nothing yet.'; return; }
+    $('recent').innerHTML='';
+    rows.forEach(r=>{
+      const d=document.createElement('div'); d.className='recent'+(r.name===currentName?' on':'');
+      const sub=[r.subject,r.label].filter(Boolean).join(' · ');
+      d.innerHTML=`<div class="nm">${r.name}<small>${sub?sub+' · ':''}${r.created}</small></div><span class="tag ${r.done?'ok':'run'}">${r.done?'ready':'…'}</span><button class="x" title="Delete">&times;</button>`;
+      d.onclick=()=>openJob(r.name,false);
+      d.querySelector('.x').onclick=async ev=>{ ev.stopPropagation(); if(!confirm('Delete this analysis and its files?')) return;
+        try{ await api('/api/jobs/'+r.name,{method:'DELETE'}); if(currentName===r.name) showHero(); refreshRecent(); }catch(e){ alert(e.message); } };
+      $('recent').appendChild(d);
+    });
+  }catch(e){ $('servTag').textContent='server offline'; $('servTag').className='tag err'; }
+}
+
+// ---------------------------------------------------------------- job lifecycle
+function showHero(){ stopPoll(); stopPlayback(); currentName=null; ['runPanel','results','ctrlPanel'].forEach(i=>$(i).classList.add('hidden')); $('hero').classList.remove('hidden'); }
+function stopPoll(){ if(pollTimer){ clearTimeout(pollTimer); pollTimer=null; } }
+
+async function openJob(name){
+  stopPoll(); stopPlayback(); currentName=name; refreshRecent();
+  $('hero').classList.add('hidden'); $('results').classList.add('hidden'); $('ctrlPanel').classList.add('hidden');
+  $('runPanel').classList.remove('hidden'); $('runPanel').classList.remove('err');
+  poll();
+}
+async function poll(){
+  const name=currentName; if(!name) return;
+  let st; try{ st = await (await api('/api/jobs/'+name)).json(); }catch(e){ $('runTxt').textContent=e.message; pollTimer=setTimeout(poll,2500); return; }
+  if(name!==currentName) return;
+  renderRun(st);
+  if(st.state==='done'){ stopPoll(); await showResults(name); refreshRecent(); return; }
+  if(st.state==='error'){ stopPoll(); refreshRecent(); return; }
+  pollTimer=setTimeout(poll,1500);
+}
+const STAGE_LABEL={sync:'Clap sync',front:'Front video',side:'Side video',fusion:'Fuse reps',packaging:'Build page'};
+function renderRun(st){
+  $('runTitle').textContent = st.state==='error' ? 'Something went wrong' : (st.state==='done' ? 'Done' : 'Analysing…');
+  $('runPanel').classList.toggle('err', st.state==='error');
+  const idx = st.stages.indexOf(st.stage);
+  $('stepper').innerHTML = st.stages.map((s,i)=>`<div class="stp ${st.state==='done'||i<idx?'done':(i===idx?'on':'')}">${i<idx||st.state==='done'?'✓ ':''}${STAGE_LABEL[s]}</div>`).join('');
+  let pct = idx<0 ? 2 : (idx/st.stages.length)*100;
+  if(st.progress && (st.stage==='front'||st.stage==='side')) pct += (st.progress.done/st.progress.total)*(100/st.stages.length);
+  $('runFill').style.width = clamp(pct,2,100)+'%';
+  $('runTxt').textContent = (st.state==='error' ? 'Read the log below — the last lines show what failed. ' : '') +
+     (st.progress ? `${STAGE_LABEL[st.stage]}: frame ${st.progress.done} of ${st.progress.total}. ` : '') + (st.elapsed_s!=null ? `Elapsed ${Math.floor(st.elapsed_s/60)}m ${st.elapsed_s%60}s.` : '');
+  const pre=$('log'), end = pre.scrollTop+pre.clientHeight>=pre.scrollHeight-30; pre.textContent=st.log||''; if(end) pre.scrollTop=pre.scrollHeight;
+}
+
+// ---------------------------------------------------------------- results
+async function showResults(name){
+  const data = await (await api(`/api/jobs/${name}/file/results.json`)).json();
+  $('runPanel').classList.add('hidden'); $('results').classList.remove('hidden');
+  const meta = data.meta||{}; const sy = data.sync;
+  const offTxt = data.offset_s==null ? 'not measured (reps matched by order)' : `${data.offset_s>=0?'+':''}${data.offset_s.toFixed(3)} s`;
+  const rel = sy ? (sy.reliable ? '<span class="tag ok">clap detected clearly</span>' : '<span class="tag err">weak clap — check sync</span>') : '';
+  const conf = sy ? `<span>clap strength front ${sy.confidence_front} · side ${sy.confidence_side}</span>` : '';
+  $('syncPanel').innerHTML = `<div class="sync"><b style="color:var(--text);font-size:15px">${name}</b>
+      ${meta.subject?`<span class="tag">subject ${meta.subject}</span>`:''}${meta.label?`<span class="tag">${meta.label}</span>`:''}
+      <span>Clap offset (side − front): <b style="color:var(--accent)">${offTxt}</b></span>${rel}${conf}</div>
+      <div class="note">The side video is shifted by this offset so both show the same moment.</div>`;
+  if(data.sync_only){ $('vidPanel').classList.add('hidden'); document.querySelectorAll('#results .panel').forEach((p,i)=>{ if(i>0) p.classList.add('hidden'); }); $('ctrlPanel').classList.add('hidden'); return; }
+  document.querySelectorAll('#results .panel').forEach(p=>p.classList.remove('hidden'));
+  await plotlyReady;
+  initResults(name,data);
+}
+
+function initResults(name,data){
+  S = { name, data, off: data.offset_s||0, sel:new Set(), smooth:1, showReps:true, t:0, playing:false, raf:null, lastDraw:0, cursorOK:false };
+  const keys = Object.keys(data.front.m);
+  S.dur = Math.max(data.front.t[data.front.t.length-1]||0, (data.side.t[data.side.t.length-1]||0)-S.off);
+  // videos
+  const vF=$('vF'), vS=$('vS');
+  for(const [v,view,box] of [[vF,'front','noF'],[vS,'side','noS']]){
+    if(data.media[view]){ v.classList.remove('hidden'); $(box).classList.add('hidden'); v.src=`/api/jobs/${name}/file/${data.media[view]}`; v.load(); }
+    else { v.removeAttribute('src'); v.classList.add('hidden'); $(box).classList.remove('hidden'); $(box).textContent='No video available for this analysis'; }
+  }
+  S.hasVid = !!data.media.front;
+  vF.onloadedmetadata = () => { if(vF.duration) S.dur=Math.max(S.dur||0,vF.duration); $('scrub').max=S.dur; updateTime(); };
+  $('scrub').max=S.dur; $('scrub').value=0;
+  // metric list
+  $('ctrlPanel').classList.remove('hidden');
+  let h='';
+  for(const [view,cols] of [['front',FRONT_COL],['side',SIDE_COL]]){
+    h+=`<div class="grp"><h4><span class="dot" style="background:${cols[0]}"></span>${view} view</h4>`;
+    keys.forEach(k=>{ const id=`${view}:${k}`; const on=DEFAULT_SEL[view].includes(k); if(on) S.sel.add(id);
+      h+=`<label class="met"><input type="checkbox" data-id="${id}" ${on?'checked':''}>${pretty(k)}</label>`; });
+    h+='</div>';
+  }
+  $('metricList').innerHTML=h;
+  $('metricList').querySelectorAll('input').forEach(c=>c.onchange=()=>{ c.checked?S.sel.add(c.dataset.id):S.sel.delete(c.dataset.id); drawPlot(); updateCards(); });
+  $('smooth').value=1; $('smVal').textContent='(off)'; $('smooth').oninput=e=>{ S.smooth=+e.target.value; $('smVal').textContent=S.smooth>1?`(${S.smooth} frames)`:'(off)'; drawPlot(); };
+  $('showReps').checked=true; $('showReps').onchange=e=>{ S.showReps=e.target.checked; drawPlot(); };
+  // rep chips
+  $('repChips').innerHTML = data.reps.length ? '<span class="note">Jump to rep:</span>' : '<span class="note">No squat reps were detected.</span>';
+  data.reps.forEach(r=>{ const b=document.createElement('button'); b.className='chip'; b.textContent='Rep '+r.id; b.onclick=()=>seek(r.front[1]); $('repChips').appendChild(b); });
+  // table
+  buildTable(data);
+  $('downloads').innerHTML = Object.entries(data.downloads).map(([f,l])=>`<a class="dl-a" href="/api/jobs/${name}/file/${f}" download>${l}</a>`).join('');
+  // transport
+  $('play').onclick=togglePlay; $('speed').onchange=()=>{ const r=+$('speed').value; vF.playbackRate=r; vS.playbackRate=r; };
+  $('scrub').oninput=e=>seek(+e.target.value);
+  drawPlot(); seek(0);
+}
+
+// ---- timing / sync core
+function frameAt(view,t){ const d=S.data[view]; return clamp(Math.round(t*S.data.fps[view]),0,d.n_frames-1); }
+function sideT(t){ return t+S.off; }
+function seek(t){
+  t=clamp(t,0,S.dur||0); S.t=t;
+  const vF=$('vF'), vS=$('vS');
+  if(S.hasVid){ try{ vF.currentTime=t; }catch(e){}
+    if(S.data.media.side){ const st=sideT(t); try{ vS.currentTime=clamp(st,0,vS.duration||st); }catch(e){} } }
+  updateTime();
+}
+function updateTime(){
+  const t = (S.hasVid && S.playing) ? $('vF').currentTime : S.t; S.t=t;
+  $('scrub').value=t; $('tlabel').textContent=`${t.toFixed(2)} / ${(S.dur||0).toFixed(2)} s`;
+  updateCards(); moveCursor(); markRep();
+}
+function togglePlay(){ S.playing ? stopPlayback() : startPlayback(); }
+function startPlayback(){
+  if(!S.hasVid) return; const vF=$('vF'), vS=$('vS');
+  if(vF.ended||S.t>=S.dur-0.05){ seek(0); }
+  S.playing=true; $('play').innerHTML='&#10074;&#10074;'; vF.playbackRate=vS.playbackRate=+$('speed').value;
+  vF.play(); if(S.data.media.side){ const st=sideT(vF.currentTime); if(st>=0 && st<(vS.duration||1e9)) vS.play(); }
+  const loop=()=>{ if(!S.playing) return;
+    const t=vF.currentTime, st=sideT(t);
+    if(S.data.media.side){
+      if(st<0 || st>=(vS.duration||1e9)-0.03){ if(!vS.paused) vS.pause(); }
+      else { if(vS.paused) vS.play(); if(Math.abs(vS.currentTime-st)>0.12) vS.currentTime=st; }
+    }
+    if(vF.ended){ stopPlayback(); return; }
+    const now=performance.now(); if(now-S.lastDraw>60){ S.lastDraw=now; updateTime(); }
+    S.raf=requestAnimationFrame(loop); };
+  S.raf=requestAnimationFrame(loop);
+}
+function stopPlayback(){ if(!S) return; S.playing=false; if(S.raf) cancelAnimationFrame(S.raf); $('play').innerHTML='&#9654;'; $('vF').pause(); $('vS').pause(); if(S.hasVid) S.t=$('vF').currentTime||S.t; }
+
+// ---- cards
+function updateCards(){
+  if(!S) return; const t=S.t; const fi=frameAt('front',t), si=frameAt('side',sideT(t));
+  let h=`<div class="card"><small>Front frame</small><b>${fi}</b></div><div class="card"><small>Side frame</small><b>${si}</b></div>`;
+  let n=0;
+  for(const id of S.sel){ if(n++>=10) break; const [view,k]=id.split(':'); const arr=S.data[view].m[k]; const v=arr[view==='front'?fi:si];
+    const col=(view==='front'?FRONT_COL:SIDE_COL)[ [...S.sel].filter(x=>x.startsWith(view+':')).indexOf(id)%6 ];
+    h+=`<div class="card"><small><span class="dot" style="background:${col}"></span>${view} · ${pretty(k)}</small><b>${fmt(v)}°</b></div>`; }
+  $('cards').innerHTML=h;
+}
+
+// ---- plot
+function smoothArr(a,w){ if(w<=1) return a; const h=(w-1)/2, out=new Array(a.length);
+  for(let i=0;i<a.length;i++){ let s=0,c=0; for(let j=Math.max(0,i-h);j<=Math.min(a.length-1,i+h);j++){ const v=a[j]; if(v!==null){s+=v;c++;} } out[i]=c?s/c:null; } return out; }
+function drawPlot(){
+  if(!S) return; const D=S.data;
+  const traces=[]; const cnt={front:0,side:0};
+  for(const id of S.sel){ const [view,k]=id.split(':'); const col=(view==='front'?FRONT_COL:SIDE_COL)[cnt[view]++%6];
+    const x = view==='front' ? D.front.t : D.side.t.map(t=>+(t-S.off).toFixed(3));  // side drawn on the front clock
+    traces.push({x, y:smoothArr(D[view].m[k],S.smooth), name:`${view} · ${pretty(k)}`, mode:'lines', line:{color:col,width:2,dash:view==='side'?'solid':'solid'}, connectgaps:false}); }
+  const shapes=[{type:'line',xref:'x',yref:'paper',x0:S.t,x1:S.t,y0:0,y1:1,line:{color:'#ffffff',width:1.5}}];
+  const anns=[];
+  if(S.showReps) D.reps.forEach(r=>{ shapes.push({type:'rect',xref:'x',yref:'paper',x0:r.front[0],x1:r.front[2],y0:0,y1:1,fillcolor:'rgba(255,124,0,0.07)',line:{width:0},layer:'below'});
+    anns.push({x:(r.front[0]+r.front[2])/2,y:1,xref:'x',yref:'paper',text:'R'+r.id,showarrow:false,yanchor:'bottom',font:{color:'#9A9A9A',size:11}}); });
+  const layout={paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'#161616',font:{color:'#ddd'},margin:{t:26,l:52,r:14,b:44},
+    xaxis:{title:'time (s) — front-video clock',gridcolor:'#262626',zerolinecolor:'#333',range:[0,S.dur]},
+    yaxis:{title:'degrees',gridcolor:'#262626',zerolinecolor:'#555'},hovermode:'x unified',legend:{orientation:'h',y:-0.22},shapes,annotations:anns};
+  if(!traces.length) layout.annotations=[{text:'Tick some metrics on the left',xref:'paper',yref:'paper',x:.5,y:.5,showarrow:false,font:{size:16,color:'#777'}}];
+  Plotly.react('plot',traces,layout,{responsive:true,displaylogo:false}).then(()=>{
+    const el=$('plot'); if(!el._wired){ el._wired=true;
+      el.on('plotly_click',ev=>{ if(ev.points&&ev.points.length){ if(S.playing) stopPlayback(); seek(ev.points[0].x); } }); } });
+}
+function moveCursor(){ if(!S) return; const el=$('plot'); if(!el.layout||!el.layout.shapes) return; Plotly.relayout(el,{'shapes[0].x0':S.t,'shapes[0].x1':S.t}); }
+
+// ---- table
+const COLS=[['rep_id','Rep'],['front_bottom_s','Bottom (s)'],['front_squat_depth_knee_deg_bottom','Knee flex. front (°)'],['side_squat_depth_knee_deg_bottom','Knee flex. side (°)'],
+  ['front_knee_valgus_L_max','Valgus L max (°)'],['front_knee_valgus_R_max','Valgus R max (°)'],['side_sagittal_flexion_trunk_max','Trunk lean max (°)'],
+  ['side_hip_flexion_L_bottom','Hip flex. at bottom (°)'],['side_ankle_dorsiflexion_proxy_L_max','Ankle proxy max (°)'],['side_rep_dur_s','Duration (s)']];
+function buildTable(data){
+  if(!data.table.length){ $('repTable').innerHTML='<tr><td>No reps matched between the two views.</td></tr>'; return; }
+  let h='<thead><tr>'+COLS.map(c=>`<th>${c[1]}</th>`).join('')+'</tr></thead><tbody>';
+  data.table.forEach(r=>{ h+=`<tr data-rep="${r.rep_id}">`+COLS.map(c=>`<td>${c[0]==='rep_id'?'Rep '+r[c[0]]:fmt(r[c[0]],c[0].endsWith('_s')?2:1)}</td>`).join('')+'</tr>'; });
+  $('repTable').innerHTML=h+'</tbody>';
+  $('repTable').querySelectorAll('tbody tr').forEach(tr=>tr.onclick=()=>{ const rep=S.data.reps.find(x=>x.id==tr.dataset.rep); if(rep){ if(S.playing) stopPlayback(); seek(rep.front[1]); } });
+}
+function markRep(){ if(!S) return; const t=S.t; const cur=S.data.reps.find(r=>t>=r.front[0]&&t<=r.front[2]);
+  document.querySelectorAll('#repTable tbody tr').forEach(tr=>tr.classList.toggle('on',!!cur&&+tr.dataset.rep===cur.id));
+  document.querySelectorAll('#repChips .chip').forEach((c,i)=>c.classList.toggle('on',!!cur&&cur.id===i+1)); }
+
+// ---------------------------------------------------------------- start
+refreshRecent(); setInterval(()=>{ if(!currentName) refreshRecent(); }, 8000);
+{ const m = location.hash.match(/^#job=([\w\-]+)$/); if(m) openJob(m[1]); }   // open a result directly via a link
+</script>
+</body>
+</html>
