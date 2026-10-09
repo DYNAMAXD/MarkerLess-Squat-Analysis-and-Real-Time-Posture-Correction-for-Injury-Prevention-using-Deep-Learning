@@ -60,7 +60,7 @@ def main():
     ap.add_argument("--fps-front", type=float), ap.add_argument("--fps-side", type=float)
     ap.add_argument("--offset", type=float, help="clap offset in seconds (side minus front); skips audio sync")
     ap.add_argument("--no-sync", action="store_true", help="match reps by order, no clap sync")
-    ap.add_argument("--device", default="auto", choices=["auto", "gpu", "cpu"])
+    ap.add_argument("--device", default="cpu", choices=["auto", "gpu", "cpu"])
     ap.add_argument("--det-conf", type=float, default=0.5)
     ap.add_argument("--sync-only", action="store_true", help="only measure the clap offset, skip the pose models")
     a = ap.parse_args()

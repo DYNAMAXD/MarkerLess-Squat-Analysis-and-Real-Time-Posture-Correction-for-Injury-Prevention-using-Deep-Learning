@@ -35,11 +35,11 @@ def _ffmpeg_exe():
 
 
 def extract_audio(video, sr=16000, seconds=30.0):
-    """First `seconds` of the video's audio as a mono float32 array."""
+    """First `seconds` of the video's audio (the whole track if seconds is None) as a mono float32 array."""
     exe = _ffmpeg_exe()
     with tempfile.TemporaryDirectory() as td:
         wav_path = Path(td) / "audio.wav"
-        cmd = [exe, "-v", "error", "-i", str(video), "-t", str(seconds),
+        cmd = [exe, "-v", "error", "-i", str(video), *(["-t", str(seconds)] if seconds else []),
                "-vn", "-ac", "1", "-ar", str(sr), "-f", "wav", "-y", str(wav_path)]
         res = subprocess.run(cmd, capture_output=True, text=True)
         if res.returncode != 0 or not wav_path.exists():

@@ -1,0 +1,181 @@
+0. CAMERA SETTINGS  (identical on BOTH cameras, for EVERY recording) 
+ If any of these change between the intrinsic video and the squat video, the
+ intrinsics are no longer valid.
+
+  [ ] Resolution ............ 1920 x 1080
+  [ ] Frame rate ............ 29.97 / 30 fps   (NOT 50 - also for intrinsics)
+  [ ] FOV / lens mode ....... pick one (e.g. Wide) and never change it
+  [ ] Distortion correction / Dewarp ... choose ON or OFF once, keep it the same
+  [ ] Stabilisation ......... OFF  (RockSteady / HorizonSteady / EIS)
+  [ ] Zoom .................. 1x, none
+  [ ] Audio ................. ON   (the clap sync needs sound)
+  [ ] Light ................. bright and even; shutter 1/250 s or faster if
+                              it can be set
+  [ ] Cameras labelled "SIDE" and "FRONT" - never swap them
+ 
+ 1. THE CHECKERBOARD 
+  [ ] Pattern: 7 x 8 squares = 6 x 7 INNER corners (keep this pattern)
+  [ ] Bigger is better: squares ~50-60 mm -> board ~420 x 480 mm
+      (A2 print, or two A3 sheets joined exactly)
+  [ ] Glued perfectly FLAT on rigid foam board / acrylic
+  [ ] Matte print, no glare, white border >= 1 square around the pattern
+  [ ] MEASURE one square: measure across 6 squares, divide by 6.
+      Enter this value in mm as the square size.
+      Square size measured: ________ mm
+      (This sets the scale of the whole 3D result. 41 mm is what run
+       run_1009-163330 used, and its bone lengths and feet-on-the-floor
+       heights came out right.)
+
+ 
+ 2. CAMERA PLACEMENT  (before any recording) 
+  [ ] Mark the squat spot on the floor with tape
+  [ ] SIDE camera: perpendicular to the subject's side, looking straight at
+      the spot
+  [ ] FRONT camera: facing the subject straight on -> cameras ~90 deg apart
+  [ ] Tripod height ~0.9 - 1.0 m (about hip height)
+  [ ] Both tripods LEVEL (bubble level / camera horizon level)
+  [ ] Whole body + ~15 % margin in frame in BOTH cameras:
+        - standing with arms overhead
+        - at the bottom of the deepest squat
+      Body fills ~60-75 % of the frame height
+  [ ] Lock the tripods. From now on NOTHING touches the cameras.
+      If a camera is bumped -> redo the extrinsic board (section 4, step 3).
+ 
+ 3. INTRINSIC VIDEO  (one per camera, recorded separately) 
+ Camera stays still on its tripod, you move the board. Can be reused for later
+ sessions as long as the camera and all section 0 settings stay the same.
+
+  Length ........... 40 - 60 s  (the pipeline takes 60 evenly spaced frames)
+  Board size ....... 1/3 to 1/2 of the frame WIDTH (~600-900 px wide)
+                     -> with a wide lens: board ~0.5 - 1 m from the camera
+  Whole board ...... ALWAYS fully visible (a cut-off corner = frame rejected)
+  Movement ......... SLOW; PAUSE ~1 s at every position (no blur)
+
+  Route - cover the WHOLE image, especially the corners and edges:
+
+      +---------------------------------+
+	      |  1 -------- 2 -------- 3        |
+      |                        |        |
+      |  6 -------- 5 -------- 4        |
+      |  |                              |
+      |  7 -------- 8 -------- 9        |
+      +---------------------------------+
+
+  At EACH of the 9 spots:
+      a) flat, facing the camera ............ 1 s
+      b) tilted ~40 deg LEFT, then RIGHT .... 1 s each
+      c) tilted ~40 deg UP, then DOWN ....... 1 s each
+
+  At spots 1, 3, 7, 9 the board's outer edge should almost TOUCH the frame
+  corner. Lens distortion is strongest there.
+
+  Finish with:
+      - 3-4 positions tilted 45 deg
+      - 1-2 positions farther away (board ~1/5 of the frame width)
+
+  Tilt slightly if ceiling lights glare on the board.
+
+  CHECK after calibration (log / Calib_board.toml):
+      [ ] RMS < 0.5 px
+      [ ] fx ~= fy (within 2 %)
+      [ ] cx = 960 +- 40,  cy = 540 +- 40
+      [ ] side and front fx similar (if same camera model + same mode)
+      If any check fails -> re-record that camera's intrinsic video.
+ 
+ 4. FULL-LENGTH (SQUAT) VIDEO  - exact timeline 
+  #  time    action
+  -  ------  ------------------------------------------------------------------
+  1  0 s     Press RECORD on BOTH cameras (order doesn't matter)
+  2  -       Helper at the squat spot holding the board
+  3  ~5 s    EXTRINSIC BOARD (details below) - hold PERFECTLY STILL for 3 s
+  4  ~10 s   Put the board down QUIETLY, out of view (don't drop it - a bang
+             can confuse the clap sync)
+  5  ~15 s   ONE loud, sharp CLAP, hands visible to both cameras
+               - 2 s of silence before and after it
+               - within the FIRST 90 s of the recording
+               - the loudest sound so far
+  6  +2 s    Subject on the tape mark, standing still 3 s
+             (feet hip-width, arms in squat position)
+             Helper OUT of both views
+  7  -       SQUATS: stand FULLY upright ~1 s between reps
+             (reps are counted from knee bend), normal controlled pace
+  8  end     Stand still 2 s, then stop BOTH cameras
+
+  EXTRINSIC BOARD (step 3) in detail:
+  [ ] At the squat spot, centre at about hip-to-chest height
+  [ ] VERTICAL (website: board position = vertical)
+  [ ] Facing the point HALFWAY between the two cameras (~45 deg to each),
+      so both see its face - never nearly edge-on
+  [ ] At least ~200 px across in EACH camera
+      (run_1009-163330: A4 board flat on the floor, ~147 px side / ~94 px
+       front. It worked, but a bigger board gives steadier extrinsics.)
+  [ ] STILL: corners must move < 1.5 px between frames ->
+      rest it on a stand / chair back / tripod, or brace elbows on your body
+  [ ] Whole board visible in BOTH cameras at the same moment,
+      no hand covering the pattern
+  (Alternative: flat on the floor at the spot + board position = horizontal.
+   Usually worse - it looks very foreshortened from hip-height cameras.)
+
+  SUBJECT:
+  [ ] Only ONE person visible in either camera during the squats
+  [ ] Fitted clothing that contrasts with the background
+  [ ] Barefoot or flat shoes, hair tied back
+  [ ] Head, hands and feet in frame for every rep
+
+ 4B. MODE 2 - SEPARATE EXTRINSIC VIDEO + SQUAT VIDEOS (alternative)
+ Section 4 above is MODE 1 (board, clap and squats in one video) - the one
+ used for the dataset: every squat video has its own board, so a camera
+ that moved between subjects only affects that subject. The batch page
+ (start_batch.ps1) does mode 1 by default. In MODE 2 the board is filmed
+ ONCE per camera setup, then every subject only does clap -> squats -> clap
+ (batch page: "One calibration from extrinsic_front/side").
+ Mode 1 + an extra extrinsic video per camera is also useful: the batch uses
+ it for any subject whose board was not detected.
+
+  EXTRINSIC VIDEO (once, after the tripods are locked):
+  1  Press RECORD on BOTH cameras
+  2  Board at the squat spot, seen by BOTH cameras, STILL for 3 s
+     (flat on the floor -> board position "horizontal"; held/standing ->
+      "vertical"; same size/stillness rules as section 4)
+  3  ONE loud clap (before or after the board, within the first 90 s)
+  4  Stop both cameras -> name them extrinsic_front / extrinsic_side
+
+  SQUAT VIDEO (every subject / every set):
+  1  Press RECORD on BOTH cameras
+  2  ONE loud clap, 2 s of silence around it
+  3  Subject on the tape mark, standing still 2-3 s, then the squats
+  4  ONE loud clap at the end (>= 3 s after the first one), then stop
+     Both claps must be the loudest sounds of the recording - no dropped
+     weights, no board being put down loudly.
+  The analysis uses only what is between the two claps; the second clap
+  also measures any clock drift between the cameras.
+
+  If ANY camera is moved or bumped -> record a new extrinsic video and
+  process the following subjects with it (a separate dataset folder).
+  Intrinsic videos stay valid as long as section 0 settings don't change.
+
+ 5. UPLOADING
+  [ ] ORIGINAL camera files - not trimmed, not re-encoded, audio kept
+      (some phone and messaging apps strip audio or re-encode)
+  [ ] Dataset batch: rename every squat video uniquely, e.g. P01_front.mp4 /
+      P01_side.mp4 (both cameras number their files DJI_0001...; the same
+      name twice = that row is skipped). Calibration videos are named
+      intrinsic_front / intrinsic_side (+ optional extrinsic_front/side).
+      Mapping CSV: person_id,front_id,side_id,error_performed with
+      error_performed quoted, e.g. "knee_valgus, heels_up"; write "correct"
+      for a correct set instead of leaving it empty.
+  [ ] Website settings:
+        intrinsic corners 6,7   extrinsic corners 6,7
+        square size = YOUR MEASURED mm (both boards)
+        board position = vertical (or horizontal if it was on the floor)
+  [ ] Same camera setup, several squat sessions? You may run the
+      "Extrinsic calibration" tab once and reuse it - but only if the
+      cameras were not touched. Including the board in every full-length
+      video is safer.
+ 
+ 6. LOG CHECKS AFTER A RUN 
+  [ ] [sync] "correlation peak N x the next best"  -> N >= 2, and the clap
+      found is the one you made
+  [ ] [calibration] "using the one where it is largest ... (~N px)"
+      -> N >= 150-200
+  [ ] extrinsic reprojection < 1 px per camera 

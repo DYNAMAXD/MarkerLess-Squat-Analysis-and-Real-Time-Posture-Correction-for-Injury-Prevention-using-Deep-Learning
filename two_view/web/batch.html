@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Squat Studio Batch</title>
+<style>
+:root{
+  --bg:#0B0B0B; --panel:#1F1F1F; --panel2:#161616; --line:#333; --text:#F5F5F5; --muted:#9A9A9A;
+  --accent:#FF7C00; --accent-soft:rgba(255,124,0,.14); --ok:#4cd07d; --warn:#f2c14e; --bad:#ff5c5c; --front:#4DA3FF;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.page{max-width:1750px;margin:auto;padding:22px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap}
+header h1{margin:0;font-size:28px} header h1 span{color:var(--accent)}
+header p{margin:2px 0 0;color:var(--muted)}
+.layout{display:grid;grid-template-columns:390px minmax(0,1fr);gap:20px;align-items:start}
+@media(max-width:1050px){.layout{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.title{font-size:17px;font-weight:700;margin:0 0 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;color:var(--muted);margin:14px 0 6px}
+input[type=text],select{width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);outline:none;font:inherit}
+input[type=text]:focus,select:focus{border-color:var(--text)}
+input::placeholder{color:#777}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{font:inherit;cursor:pointer}
+.btn{width:100%;margin-top:14px;padding:12px;border-radius:10px;border:0;background:var(--accent);color:#111;font-weight:800;font-size:15px}
+.btn:hover{filter:brightness(1.1)} .btn:disabled{background:#444;color:#888;cursor:not-allowed}
+.ghost{background:#2a2a2a;border:1px solid var(--line);color:var(--text);padding:8px 12px;border-radius:8px}
+.ghost:hover{border-color:var(--accent);color:var(--accent)}
+.ghost.danger:hover{border-color:var(--bad);color:var(--bad)}
+.chk{display:flex;align-items:center;gap:8px;margin:9px 0 0;color:var(--muted);font-size:13px}
+.chk input{accent-color:var(--accent)}
+details{margin-top:10px;color:var(--muted)} summary{cursor:pointer;font-size:13px}
+.bar{height:10px;background:var(--bg);border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.bar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .4s}
+.bar.ok>i{background:var(--ok)}
+.tag{font-size:11px;padding:2px 8px;border-radius:20px;background:#333;color:var(--muted);white-space:nowrap}
+.tag.ok{background:rgba(76,208,125,.15);color:var(--ok)} .tag.run{background:var(--accent-soft);color:var(--accent)}
+.tag.err{background:rgba(255,92,92,.15);color:var(--bad)} .tag.warn{background:rgba(242,193,78,.15);color:var(--warn)}
+.note{color:var(--muted);font-size:12px}
+.msg{padding:9px 12px;border-radius:8px;margin:6px 0;font-size:13px}
+.msg.err{background:rgba(255,92,92,.1);border:1px solid rgba(255,92,92,.4);color:#ffb3b3}
+.msg.warn{background:rgba(242,193,78,.08);border:1px solid rgba(242,193,78,.35);color:#f6dc9a}
+.hidden{display:none!important}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 9px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;position:sticky;top:0;background:var(--panel);z-index:1}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tbody tr:hover{background:var(--panel2)} tr.cur{background:var(--accent-soft)}
+.scroll{overflow:auto;max-height:420px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px;margin-top:14px}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.card small{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.card b{font-size:21px;font-variant-numeric:tabular-nums}
+.stepper{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 4px}
+.stp{flex:1;min-width:92px;padding:8px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font-size:12px;text-align:center}
+.stp.on{border-color:var(--accent);color:var(--text);background:var(--accent-soft)} .stp.done{color:var(--ok);border-color:#2c5a3d}
+.stp.on::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:6px;animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.2}}
+pre{background:#050505;border:1px solid var(--line);color:#c9f7d3;padding:12px;border-radius:8px;max-height:300px;overflow:auto;font-size:12px;white-space:pre-wrap;margin:8px 0 0}
+.imgs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.imgs img{width:100%;border-radius:8px;border:1px solid var(--line);background:#000}
+.meter{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-top:6px}
+.meter .bar{flex:1;height:8px}
+.empty{color:var(--muted);text-align:center;padding:40px 10px}
+a{color:var(--front)}
+code{background:#2a2a2a;padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div>
+      <h1>Squat Studio <span>Batch</span></h1>
+      <p>Whole dataset &rarr; calibrated 3D keypoints, angles and reps as CSV files, one folder per person.</p>
+    </div>
+    <div id="devLine" class="note">checking the device&hellip;</div>
+  </header>
+
+  <div class="layout">
+    <aside>
+      <div class="panel">
+        <div class="title">1 &middot; Dataset</div>
+        <div class="label">Dataset folder</div>
+        <input type="text" id="input" placeholder="D:\squat_dataset">
+        <div class="note" style="margin-top:6px">Holds <code>intrinsic_front</code> and <code>intrinsic_side</code> videos, one mapping <code>.csv</code> (person_id, front_id, side_id, error_performed) and the squat videos. <code>extrinsic_front</code> / <code>extrinsic_side</code> videos are optional (fallback when a person's board is not found).</div>
+        <div class="label">Output folder</div>
+        <input type="text" id="output" placeholder="(default) <dataset>\preprocessed_data">
+        <details><summary>Mapping CSV, if there are several</summary>
+          <input type="text" id="csv" placeholder="D:\squat_dataset\mapping.csv" style="margin-top:8px">
+        </details>
+        <button class="btn" id="scanBtn" style="background:#333;color:var(--text)">Scan folder</button>
+      </div>
+
+      <div class="panel">
+        <div class="title">2 &middot; Settings</div>
+        <div class="label">Intrinsic board &mdash; inner corners &middot; square (mm)</div>
+        <div class="two"><input type="text" id="intr_corners" value="6,7"><input type="text" id="intr_square" value="41"></div>
+        <div class="label">Extrinsic board &mdash; inner corners &middot; square (mm)</div>
+        <div class="two"><input type="text" id="ext_corners" value="6,7"><input type="text" id="ext_square" value="41"></div>
+        <div class="note" style="margin-top:6px">INNER corners (7&times;8 squares &rarr; 6,7). The square size sets the metric scale: measure the printed board.</div>
+        <div class="label">Extrinsics (camera positions)</div>
+        <select id="extrinsics"><option value="per-video">Board at the start of each squat video (mode 1)</option><option value="shared">One calibration from extrinsic_front/side for all (mode 2)</option></select>
+        <div class="label">Extrinsic board position</div>
+        <select id="board_position"><option value="vertical">Held / standing (up = level cameras)</option><option value="horizontal">Flat on the floor (up = board normal)</option></select>
+        <div class="label">Claps in each squat video</div>
+        <select id="squat_claps"><option value="1">One: board &rarr; clap &rarr; squats to the end</option><option value="2">Two: squats between a start and an end clap</option></select>
+        <div class="two">
+          <div><div class="label">Device</div><select id="device"><option value="auto">Auto (GPU if it works)</option><option value="cuda">GPU (CUDA) only</option><option value="cpu">CPU</option></select></div>
+          <div><div class="label">Pose model</div><select id="pose_mode"><option value="performance">Performance (most accurate)</option><option value="balanced">Balanced</option><option value="lightweight">Lightweight</option></select></div>
+        </div>
+        <div class="label">Give up on one person after (min)</div>
+        <input type="text" id="timeout_min" value="90">
+        <label class="chk"><input type="checkbox" id="redo"> Recompute persons that are already done</label>
+        <label class="chk"><input type="checkbox" id="redo_calibration"> Recompute the calibration</label>
+        <label class="chk"><input type="checkbox" id="keep_work"> Keep the large intermediate videos</label>
+        <button class="btn" id="startBtn" disabled>Start preprocessing</button>
+        <div class="two hidden" id="stopBox" style="margin-top:10px">
+          <button class="ghost" id="stopAfter">Stop after this person</button>
+          <button class="ghost danger" id="stopNow">Stop now</button>
+        </div>
+        <div id="formErr" class="msg err hidden"></div>
+      </div>
+    </aside>
+
+    <main>
+      <div class="panel" id="progPanel">
+        <div class="title">Progress <span class="tag" id="stateTag">idle</span><span class="note" id="outLine"></span></div>
+        <div id="progBody" class="empty">Scan a dataset folder, check the settings and press <b>Start preprocessing</b>.<br>
+          The batch keeps running when this page is closed (but not when the PowerShell window is closed). Starting again resumes where it stopped.</div>
+        <div id="progLive" class="hidden">
+          <div class="bar" id="mainBar"><i id="mainFill"></i></div>
+          <div class="cards">
+            <div class="card"><small>Persons done</small><b id="cDone">0</b></div>
+            <div class="card"><small>Failed</small><b id="cErr">0</b></div>
+            <div class="card"><small>Elapsed</small><b id="cElapsed">&ndash;</b></div>
+            <div class="card"><small>Avg per person</small><b id="cAvg">&ndash;</b></div>
+            <div class="card"><small>Time left (est.)</small><b id="cEta">&ndash;</b></div>
+            <div class="card" id="gpuCard"><small id="gpuName">GPU</small><b id="gpuUtil">&ndash;</b>
+              <div class="meter">mem <div class="bar"><i id="gpuMem"></i></div><span id="gpuMemTxt"></span></div></div>
+          </div>
+          <div class="label" id="curLbl">Now</div>
+          <div id="curTxt"></div>
+          <div class="stepper" id="stepper"></div>
+        </div>
+      </div>
+
+      <div class="panel hidden" id="scanPanel">
+        <div class="title">Dataset <span class="note" id="scanSum"></span></div>
+        <div id="scanMsgs"></div>
+        <div class="label">Calibration videos</div>
+        <table id="calibTable"></table>
+        <div class="label">Persons <span id="csvName" style="text-transform:none;font-weight:400"></span></div>
+        <div class="scroll"><table id="rowsTable"></table></div>
+      </div>
+
+      <div class="panel hidden" id="calibPanel">
+        <div class="title">Calibration <span class="tag" id="calibTag"></span></div>
+        <div id="calibBody"></div>
+        <div class="imgs" id="boardImgs"></div>
+      </div>
+
+      <div class="panel hidden" id="personsPanel">
+        <div class="title">Persons <span class="note">&mdash; outputs in <code>&lt;output&gt;\&lt;person_id&gt;\</code>; summary in <code>summary.csv</code></span></div>
+        <div class="scroll" style="max-height:520px"><table id="personsTable"></table></div>
+      </div>
+
+      <div class="panel">
+        <div class="title">Logs</div>
+        <div class="label" id="curLogLbl">Current step</div>
+        <pre id="curLog">&ndash;</pre>
+        <div class="label">Batch log</div>
+        <pre id="batchLog">&ndash;</pre>
+        <pre id="consoleLog" class="hidden" style="color:#ffb3b3"></pre>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const FIELDS = ['input','output','csv','extrinsics','intr_corners','intr_square','ext_corners','ext_square','board_position','squat_claps','device','pose_mode','timeout_min'];
+const CHECKS = ['redo','redo_calibration','keep_work'];
+const STAGES = ['setup','sync','calibration','extract','pose','triangulation','angles','packaging'];
+const CAL_STAGES = ['setup','sync','calibration','packaging'];
+const api = async (url, body) => {
+  const r = await fetch(url, body ? {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)} : undefined);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+};
+const dur = s => { if (s == null || !isFinite(s)) return '–'; s = Math.round(s); const h = Math.floor(s/3600), m = Math.floor(s%3600/60);
+  return h ? `${h}h ${String(m).padStart(2,'0')}m` : m ? `${m}m ${String(s%60).padStart(2,'0')}s` : `${s}s`; };
+const fmt = (v, d=1) => v == null || v === '' ? '–' : Number(v).toFixed(d);
+
+// ------------------------------------------------------------- form state (remembered in this browser)
+function form(){ const f = {}; FIELDS.forEach(k => f[k] = $(k).value.trim()); CHECKS.forEach(k => f[k] = $(k).checked); return f; }
+function saveForm(){ try{ localStorage.setItem('batchForm', JSON.stringify(form())); }catch(e){} }
+try{ const f = JSON.parse(localStorage.getItem('batchForm') || '{}');
+  FIELDS.forEach(k => { if (f[k] != null && f[k] !== '') $(k).value = f[k]; }); }catch(e){}
+FIELDS.forEach(k => $(k).addEventListener('change', saveForm));
+let scanned = null, output = null, alive = false, filledFromRun = false;
+const showErr = m => { $('formErr').textContent = m; $('formErr').classList.toggle('hidden', !m); };
+$('input').addEventListener('input', () => { scanned = null; $('startBtn').disabled = true; });
+
+// ------------------------------------------------------------- device
+api('/api/device').then(d => {
+  const g = d.gpu ? `${d.gpu.name} · ` : 'no NVIDIA GPU found · ';
+  $('devLine').innerHTML = g + (d.cuda ? '<span class="tag ok">onnxruntime CUDA ready</span>' : '<span class="tag warn">onnxruntime: CPU only</span>');
+}).catch(() => $('devLine').textContent = '');
+
+// ------------------------------------------------------------- scan
+$('scanBtn').onclick = async () => {
+  showErr(''); saveForm();
+  $('scanBtn').disabled = true; $('scanBtn').textContent = 'Scanning…';
+  try { scanned = await api('/api/scan', form()); renderScan(scanned); }
+  catch(e){ showErr(e.message); scanned = null; }
+  $('scanBtn').disabled = false; $('scanBtn').textContent = 'Scan folder';
+  $('startBtn').disabled = !scanned || scanned.errors.length > 0 || alive;
+};
+function renderScan(p){
+  $('scanPanel').classList.remove('hidden');
+  const ok = p.rows.filter(r => !r.problems.length).length;
+  $('scanSum').textContent = `— ${p.rows.length} persons in the CSV, ${ok} ready, ${p.already_done} already done · output ${p.output}`;
+  $('scanMsgs').innerHTML = p.errors.map(e => `<div class="msg err">${esc(e)}</div>`).join('') + p.warnings.map(w => `<div class="msg warn">${esc(w)}</div>`).join('');
+  const keys = ['intrinsic_front','intrinsic_side','extrinsic_front','extrinsic_side'];
+  $('calibTable').innerHTML = '<thead><tr><th>Video</th><th>File</th><th class="num">Size</th><th class="num">fps</th><th class="num">Length</th></tr></thead><tbody>' +
+    keys.map(k => { const i = p.calib_info[k]; return `<tr><td>${k}</td>` + (i ? `<td>${esc(i.path)}</td><td class="num">${i.w}×${i.h}</td><td class="num">${i.fps}</td><td class="num">${i.dur} s</td>`
+      : (k.startsWith('extrinsic') && p.extrinsics !== 'shared' ? '<td colspan="4"><span class="tag">not given (optional fallback)</span></td>'
+         : '<td colspan="4"><span class="tag err">missing</span></td>')) + '</tr>'; }).join('') + '</tbody>';
+  $('csvName').textContent = p.csv ? `— ${p.csv}` : '';
+  $('rowsTable').innerHTML = '<thead><tr><th>Line</th><th>person_id</th><th>Front video</th><th>Side video</th><th>Errors performed</th><th></th></tr></thead><tbody>' +
+    p.rows.map(r => `<tr><td>${r.line}</td><td>${esc(r.person_id)}</td><td>${esc(r.front_rel || r.front_id)}</td><td>${esc(r.side_rel || r.side_id)}</td>
+      <td>${r.errors.map(e => `<span class="tag">${esc(e)}</span>`).join(' ') || '<span class="note">none</span>'}</td>
+      <td>${r.problems.length ? `<span class="tag err">${esc(r.problems.join('; '))}</span>` : '<span class="tag ok">ready</span>'}</td></tr>`).join('') + '</tbody>';
+}
+
+// ------------------------------------------------------------- start / stop
+$('startBtn').onclick = async () => {
+  showErr(''); saveForm();
+  const f = form();
+  const n = scanned ? scanned.rows.filter(r => !r.problems.length).length : 0;
+  if (!confirm(`Start preprocessing ${n} persons?\n\nExtrinsics: ${f.extrinsics}, ${f.squat_claps} clap(s) per squat video.\nIntrinsic board ${f.intr_corners} @ ${f.intr_square} mm, extrinsic board ${f.ext_corners} @ ${f.ext_square} mm (${f.board_position}), device ${f.device}, ${f.pose_mode} model.`)) return;
+  try { const r = await api('/api/start', f); output = r.output; poll(); }
+  catch(e){ showErr(e.message); }
+};
+$('stopAfter').onclick = async () => { try{ await api('/api/stop', {output}); poll(); }catch(e){ showErr(e.message); } };
+$('stopNow').onclick = async () => { if (!confirm('Stop the batch now? The current person is abandoned (start again later to redo it).')) return;
+  try{ await api('/api/stop', {output, now:true}); poll(); }catch(e){ showErr(e.message); } };
+
+// ------------------------------------------------------------- live status
+const STATE_TAG = {starting:'run', calibrating:'run', running:'run', finished:'ok', stopped:'warn', interrupted:'warn', error:'err'};
+async function poll(){
+  let d;
+  try { d = await api('/api/status' + (output ? '?output=' + encodeURIComponent(output) : '')); } catch(e){ return; }
+  if (!d.status && !d.batch_log) return;
+  output = d.output; alive = d.alive;
+  const st = d.status || {};
+  const state = st.state || (alive ? 'starting' : 'idle');
+  $('stateTag').className = 'tag ' + (STATE_TAG[state] || ''); $('stateTag').textContent = state + (d.stop_requested && alive ? ' · stopping after this person' : '');
+  $('outLine').textContent = d.output;
+  $('startBtn').disabled = alive || !scanned || scanned.errors.length > 0;
+  $('startBtn').textContent = alive ? 'Running…' : 'Start preprocessing';
+  $('stopBox').classList.toggle('hidden', !alive);
+  $('progBody').classList.toggle('hidden', !!d.status); $('progLive').classList.toggle('hidden', !d.status);
+  $('batchLog').textContent = d.batch_log || '–'; $('curLog').textContent = d.current_log || '–';
+  $('consoleLog').textContent = d.console || ''; $('consoleLog').classList.toggle('hidden', !d.console || state === 'finished');
+  if (d.gpu){ $('gpuCard').classList.remove('hidden'); $('gpuName').textContent = d.gpu.name;
+    $('gpuUtil').textContent = `${d.gpu.util} % · ${d.gpu.temp}°C`; $('gpuMem').style.width = (100*d.gpu.mem_used/d.gpu.mem_total) + '%';
+    $('gpuMemTxt').textContent = `${(d.gpu.mem_used/1024).toFixed(1)}/${(d.gpu.mem_total/1024).toFixed(0)} GB`; }
+  else $('gpuCard').classList.add('hidden');
+  if (!d.status) return;
+  if (alive && !filledFromRun && st.settings){  // a reopened page shows the settings of the batch that is running
+    FIELDS.forEach(k => { if (st.settings[k] != null) $(k).value = st.settings[k]; });
+    $('input').value = st.input || ''; $('output').value = st.output || '';
+    filledFromRun = true;
+  }
+  const P = st.persons || [];
+  const cnt = s => P.filter(p => p.state === s).length;
+  const valid = P.filter(p => p.state !== 'invalid').length, done = cnt('done'), err = cnt('error');
+  $('mainFill').style.width = valid ? (100*(done+err)/valid) + '%' : '0';
+  $('mainBar').classList.toggle('ok', state === 'finished');
+  $('cDone').textContent = `${done} / ${valid}`; $('cErr').textContent = err;
+  const end = st.finished && !alive ? Date.parse(st.finished.replace(' ', 'T'))/1000 : d.now;
+  $('cElapsed').textContent = dur(end - st.t0);
+  const timed = P.filter(p => p.state === 'done' && p.seconds && !(p.problem || '').startsWith('already done'));
+  const avg = timed.length ? timed.reduce((a, p) => a + p.seconds, 0) / timed.length : null;
+  $('cAvg').textContent = dur(avg);
+  const left = P.filter(p => p.state === 'pending' || p.state === 'running').length;
+  $('cEta').textContent = alive && avg ? dur(avg*left) : '–';
+  // current step
+  let stages = STAGES, cur = null, label = '';
+  if (state === 'calibrating'){ stages = CAL_STAGES; cur = st.calib && st.calib.stage; label = 'Calibration: ' + esc((st.calib && st.calib.step) || ''); }
+  else { const p = P.find(p => p.state === 'running'); if (p){ cur = p.stage; label = `<b>${esc(p.person_id)}</b> &nbsp;<span class="note">front ${esc(p.front_id)} · side ${esc(p.side_id)} · ${dur(p.seconds)}</span>`; } }
+  $('curTxt').innerHTML = label || `<span class="note">${alive ? 'starting…' : 'nothing running'}</span>`;
+  const ci = stages.indexOf(cur);
+  $('stepper').innerHTML = label ? stages.map((s, i) => `<div class="stp ${i < ci ? 'done' : i === ci ? 'on' : ''}">${s}</div>`).join('') : '';
+  $('curLogLbl').textContent = state === 'calibrating' ? 'Calibration log' : (P.find(p => p.state === 'running') ? 'Current person log' : 'Current step');
+  renderCalib(st.calib || {});
+  renderPersons(P);
+}
+function renderCalib(c){
+  $('calibPanel').classList.toggle('hidden', !c.state || c.state === 'pending');
+  $('calibTag').className = 'tag ' + ({done:'ok', running:'run', error:'err'}[c.state] || ''); $('calibTag').textContent = c.state || '';
+  if (c.state === 'error'){ $('calibBody').innerHTML = `<div class="msg err">${esc(c.problem)}</div>`; return; }
+  if (c.state !== 'done'){ $('calibBody').innerHTML = `<div class="note">running: ${esc(c.stage || '')}</div>`; $('boardImgs').innerHTML = ''; return; }
+  const cams = Object.entries(c.cams || {});
+  let h = '<table><thead><tr><th>Camera</th><th class="num">fx</th><th class="num">fy</th><th class="num">cx</th><th class="num">cy</th><th class="num">Intrinsic RMS</th></tr></thead><tbody>' +
+    cams.map(([n, k]) => `<tr><td>${esc(n)}</td><td class="num">${k.fx}</td><td class="num">${k.fy}</td><td class="num">${k.cx}</td><td class="num">${k.cy}</td><td class="num">${k.intr_rms_px ?? '–'} px</td></tr>`).join('') + '</tbody></table>';
+  const ex = c.extrinsics;
+  h += `<div class="note" style="margin-top:10px">${c.mode === 'shared' ? 'Extrinsics for everybody' : 'Extrinsics: from the board in each squat video; fallback'} from extrinsic_front/side: ` +
+       (ex ? `reprojection ≤ <b style="color:var(--text)">${ex.ext_reproj_px} px</b> · board ~${ex.board_px} px · cameras ${ex.cams_apart_m} m apart at ${ex.view_angle_deg}°` : 'none') + '</div>';
+  h += (c.warnings || []).map(w => `<div class="msg warn">${esc(w)}</div>`).join('');
+  $('calibBody').innerHTML = h;
+  const imgs = (c.boards || []).map(b => `<img src="/api/file?output=${encodeURIComponent(output)}&path=${encodeURIComponent(b)}&t=${encodeURIComponent(c.boards.length)}" alt="${esc(b)}">`).join('');
+  if ($('boardImgs').dataset.k !== imgs){ $('boardImgs').innerHTML = imgs; $('boardImgs').dataset.k = imgs; }
+}
+const PTAG = {done:'ok', running:'run', error:'err', invalid:'err', pending:''};
+function renderPersons(P){
+  $('personsPanel').classList.toggle('hidden', !P.length);
+  const link = (p, f) => `<a href="/api/file?output=${encodeURIComponent(output)}&path=${encodeURIComponent(p.folder + '/' + f)}" target="_blank">${f.split('.')[0].replace('board_', 'board ')}</a>`;
+  $('personsTable').innerHTML = '<thead><tr><th>person_id</th><th>Errors</th><th>State</th><th class="num">Time</th><th class="num">Frames</th><th class="num">Reps</th><th>Extrinsics</th><th class="num">Ext. err</th><th class="num">Cameras</th><th class="num">Triang. err</th><th>Check</th><th>Note</th></tr></thead><tbody>' +
+    P.map(p => `<tr class="${p.state === 'running' ? 'cur' : ''}"><td>${esc(p.person_id)}</td><td>${esc(p.error_performed)}</td>
+      <td><span class="tag ${PTAG[p.state] || ''}">${p.state}${p.state === 'running' && p.stage ? ' · ' + esc(p.stage) : ''}</span></td>
+      <td class="num">${p.seconds ? dur(p.seconds) : '–'}</td><td class="num">${p.frames ?? '–'}</td><td class="num">${p.reps ?? '–'}</td>
+      <td>${esc(p.extrinsics || '–')}</td><td class="num">${p.ext_reproj_px != null ? p.ext_reproj_px + ' px' : '–'}</td>
+      <td class="num">${p.cams_apart_m != null ? p.cams_apart_m + ' m · ' + p.view_angle_deg + '°' : '–'}</td>
+      <td class="num">${p.triang_err_px != null ? p.triang_err_px + ' px' : '–'}</td>
+      <td>${p.state === 'done' ? link(p, 'front.mp4') + ' · ' + link(p, 'side.mp4') + (p.extrinsics === 'own board' ? ' · ' + link(p, 'board_side.jpg') + ' · ' + link(p, 'board_front.jpg') : '') + ' · ' + link(p, 'log.txt') : p.state === 'error' ? link(p, 'log.txt') : ''}</td>
+      <td class="note">${esc(p.problem || '')}</td></tr>`).join('') + '</tbody>';
+}
+poll(); setInterval(poll, 2000);
+</script>
+</body>
+</html>

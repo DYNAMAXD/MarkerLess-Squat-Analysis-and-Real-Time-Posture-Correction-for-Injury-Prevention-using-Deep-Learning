@@ -19,6 +19,15 @@ if (-not (Test-Path $py)) {
     & $py -m pip install -r "$repo\requirements_updated_v2.txt" imageio-ffmpeg
 }
 
+# Pose2Sim gets its own environment: it needs numpy 2 and another OpenCV build, which would break the one above.
+$p2s = "C:\Pose2SimVenv\Scripts\python.exe"
+if (-not (Test-Path $p2s)) {
+    Write-Host "First run: creating the Pose2Sim environment at C:\Pose2SimVenv ..." -ForegroundColor Yellow
+    py -3.11 -m venv C:\Pose2SimVenv
+    & $p2s -m pip install --upgrade pip
+    & $p2s -m pip install pose2sim flask imageio-ffmpeg   # brings the CPU onnxruntime used for pose estimation
+}
+
 Write-Host "Starting Squat Studio at http://127.0.0.1:5000  (close this window or press Ctrl+C to stop)" -ForegroundColor Green
 Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:5000" } | Out-Null
 Set-Location $repo
