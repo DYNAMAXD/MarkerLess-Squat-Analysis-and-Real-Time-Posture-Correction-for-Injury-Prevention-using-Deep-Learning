@@ -188,28 +188,6 @@ def faces():
                     headers={"Cache-Control": "public, max-age=86400"})
 
 
-@app.get("/api/clothes.bin")
-def clothes():
-    """Per-vertex garment code (uint8: 0 skin, 1 shirt, 2 shorts) so the viewer can dress the bare SMPL body.
-    From each vertex's dominant skinning joint on the rest pose: shirt = spine / collars + upper arms (short
-    sleeves), shorts = pelvis + hips down to mid-thigh."""
-    if _faces.get("clothes") is None:
-        import numpy as np
-        import smplx
-        m = smplx.create(str(SMPL_PKL), model_type="smpl", gender="neutral")
-        v = m.v_template.numpy()
-        J = (m.J_regressor @ m.v_template).numpy()
-        dom = m.lbs_weights.numpy().argmax(1)
-        code = np.zeros(len(v), dtype=np.uint8)
-        sleeve = np.abs(v[:, 0]) < abs(J[16, 0]) + 0.11            # T-pose: arms along x
-        code[np.isin(dom, [3, 6, 9, 13, 14]) | (np.isin(dom, [16, 17]) & sleeve)] = 1
-        mid_thigh = 0.5 * (J[1, 1] + J[4, 1])
-        code[np.isin(dom, [0, 1, 2]) & (v[:, 1] > mid_thigh)] = 2
-        _faces["clothes"] = code.tobytes()
-    return Response(_faces["clothes"], mimetype="application/octet-stream",
-                    headers={"Cache-Control": "public, max-age=86400"})
-
-
 @app.get("/api/templates")
 def templates():
     rows = []

@@ -166,6 +166,7 @@
     border:1px solid var(--border); color:var(--text-dim); cursor:pointer; font-size:14px;
     backdrop-filter:blur(4px);
   }
+  #viewControls button.txt{ width:auto; padding:0 9px; font-size:12px; }
   #viewControls button:hover{ color:var(--text); border-color:var(--text-faint); }
 
   #emptyState{
@@ -247,6 +248,8 @@
       <div class="chip" id="hoverChip" style="display:none;">vertex saliency: <span id="hoverReadout">–</span></div>
     </div>
     <div id="viewControls">
+      <button class="txt" data-view="front">Front</button><button class="txt" data-view="side">Side</button>
+      <button class="txt" data-view="back">Back</button><button class="txt" data-view="top">Top</button>
       <button id="resetViewBtn" title="Reset view">⟲</button>
     </div>
     <div id="emptyState">
@@ -293,17 +296,26 @@
   window.addEventListener('resize', resizeRenderer);
   resizeRenderer();
 
-  // Orbit state (custom, so we don't depend on the OrbitControls addon)
+  // Orbit state, same convention as the 3D mesh viewer (two_view/web/mesh.html): theta = azimuth with 0 =
+  // in front of the body (SMPL faces +Z), phi = elevation above the horizontal.
   let target = new THREE.Vector3(0,0,0);
-  let sphRadius = 3, sphTheta = Math.PI/2 + 0.5, sphPhi = Math.PI/2 - 0.15;
+  let sphRadius = 3, sphTheta = 0, sphPhi = 0.12;
 
   function updateCameraFromSpherical(){
-    const x = target.x + sphRadius * Math.sin(sphPhi) * Math.cos(sphTheta);
-    const y = target.y + sphRadius * Math.cos(sphPhi);
-    const z = target.z + sphRadius * Math.sin(sphPhi) * Math.sin(sphTheta);
+    const x = target.x + sphRadius * Math.sin(sphTheta) * Math.cos(sphPhi);
+    const y = target.y + sphRadius * Math.sin(sphPhi);
+    const z = target.z + sphRadius * Math.cos(sphTheta) * Math.cos(sphPhi);
     camera.position.set(x, y, z);
     camera.lookAt(target);
   }
+  function setView(v){
+    if (v === 'front'){ sphTheta = 0; sphPhi = 0.12; }
+    if (v === 'side'){ sphTheta = Math.PI/2; sphPhi = 0.12; }
+    if (v === 'back'){ sphTheta = Math.PI; sphPhi = 0.12; }
+    if (v === 'top'){ sphPhi = 1.35; }
+    updateCameraFromSpherical();
+  }
+  document.querySelectorAll('#viewControls [data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
   updateCameraFromSpherical();
 
   function animate(){
@@ -433,8 +445,8 @@
     brushDiagonal = size.length();
     target.copy(center);
     sphRadius = brushDiagonal * 1.4;
-    sphTheta = Math.PI/2 + 0.5;
-    sphPhi = Math.PI/2 - 0.15;
+    sphTheta = 0;
+    sphPhi = 0.12;
     updateCameraFromSpherical();
 
     grid = new THREE.GridHelper(brushDiagonal * 2.2, 20, 0x2a2f3a, 0x1c1f27);
@@ -656,8 +668,8 @@
     if (isRotating){
       const dx = e.clientX - lastX, dy = e.clientY - lastY;
       lastX = e.clientX; lastY = e.clientY;
-      sphTheta += dx * 0.006;
-      sphPhi = Math.min(Math.PI - 0.08, Math.max(0.08, sphPhi + dy * 0.006));
+      sphTheta -= dx * 0.008;
+      sphPhi = Math.min(1.45, Math.max(-0.3, sphPhi + dy * 0.006));
       updateCameraFromSpherical();
       return;
     }
@@ -695,8 +707,8 @@
   document.getElementById('resetViewBtn').addEventListener('click', () => {
     if (!meshLoaded) return;
     sphRadius = brushDiagonal * 1.4;
-    sphTheta = Math.PI/2 + 0.5;
-    sphPhi = Math.PI/2 - 0.15;
+    sphTheta = 0;
+    sphPhi = 0.12;
     updateCameraFromSpherical();
   });
 
