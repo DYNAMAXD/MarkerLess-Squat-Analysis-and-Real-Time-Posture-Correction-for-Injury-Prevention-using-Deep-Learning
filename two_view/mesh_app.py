@@ -1,5 +1,5 @@
 """
-mesh_app.py -- local web page: the SMPL body mesh fitted to the Pose2Sim 3D points (like MotionBERT's mesh output),
+mesh_app.py -- local web page: MotionBERT's SMPL body mesh made from the Pose2Sim 2D keypoints of a recording,
 played back in 3D next to the front / side videos, with each labelled error's painted saliency template overlaid on
 the moving body.
 
@@ -7,7 +7,8 @@ the moving body.
     (or run two_view\\start_mesh_viewer.ps1)
 
 Folders it can open: website runs (outputs/two_view/<run>/) and batch outputs (<dataset>/preprocessed_data/<person>/),
-anything holding points3d.trc. "Build 3D mesh" runs p2s_mesh.py on that folder (~1 min on a CPU).
+anything holding points3d.trc. "Build 3D mesh" runs p2s_mesh.py on that folder: MotionBERT on the side (or front)
+camera's 2D keypoints (~15 s on a CPU), or an SMPL fit to the triangulated 3D points (~1 min).
 
 Saliency templates: <fault>_saliency.json files painted in mesh_saliency_painter.html (6890 values on the SMPL
 T-pose, same vertex order as the fitted mesh), kept in two_view/saliency_templates/ (upload them on the page).
@@ -124,7 +125,11 @@ def build():
     if not SMPL_PKL.exists():
         return jsonify({"error": f"SMPL model missing: {SMPL_PKL}"}), 400
     (folder / "mesh").mkdir(exist_ok=True)
-    BUILDS[str(folder)] = subprocess.Popen([sys.executable, "-u", str(HERE / "p2s_mesh.py"), str(folder)],
+    f = request.get_json(silent=True) or {}
+    method = "fit" if f.get("method") == "fit" else "motionbert"
+    camera = "front" if f.get("camera") == "front" else "side"
+    BUILDS[str(folder)] = subprocess.Popen([sys.executable, "-u", str(HERE / "p2s_mesh.py"), str(folder),
+                                            "--method", method, "--camera", camera],
                                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=str(ROOT))
     return jsonify({"ok": True})
 

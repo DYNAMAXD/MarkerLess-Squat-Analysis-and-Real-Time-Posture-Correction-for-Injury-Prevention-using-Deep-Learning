@@ -164,34 +164,37 @@ what was found. All options: `batch_preprocess.py --help`.
 
 ## 3D mesh + saliency viewer
 
-A MotionBERT-style SMPL body mesh made from the two-camera 3D points, played back in 3D next to the front and side
-videos, with each labelled error's **painted saliency template** overlaid on the moving body.
+MotionBERT's SMPL body mesh - the same model and steps as the single-view pipeline's mesh stage - made from the 2D
+keypoints Pose2Sim detected during preprocessing, played back in 3D next to the front and side videos, with each
+labelled error's **painted saliency template** overlaid on the moving body.
 
-1. **Run** `two_view\start_mesh_viewer.ps1` &rarr; http://127.0.0.1:5070. It uses `C:\Proj1Venv` (torch + smplx) and
-   the SMPL files in `MotionBERT\data\mesh\` (licence-gated, not in git &mdash; copy them to any other PC).
+1. **Run** `two_view\start_mesh_viewer.ps1` &rarr; http://127.0.0.1:5070. It uses `C:\Proj1Venv` (torch + smplx), the
+   MotionBERT mesh checkpoint and the SMPL files in `MotionBERT\data\mesh\` (licence-gated, not in git &mdash; copy
+   them to any other PC).
 2. **Load folder**: `<dataset>\preprocessed_data` (batch output) or `outputs\two_view` (website runs). Click a
-   recording; if it has no mesh yet, **Build 3D mesh** (about a minute on a CPU). For a whole dataset at once:
+   recording; if it has no mesh yet, **Build 3D mesh** (~5-15 s on a CPU). Whole dataset at once:
    `C:\Proj1Venv\Scripts\python.exe two_view\p2s_mesh.py <dataset>\preprocessed_data` (skips persons already done).
-3. **Templates**: open the **fault painter** link on the page (`mesh_saliency_painter.html`), load
+   The 2D keypoints come from the Pose2Sim working folder (`_work\<person>\trial\pose-associated\`), which the
+   batch keeps.
+3. **Which camera**: the **side** camera by default. Seen from the front, squat depth is along the camera's line of
+   sight and a single-camera model underestimates it badly (a deep squat came out as a slight knee bend); from the
+   side it matches the video. **Rebuild…** on the page switches to the front camera or to an SMPL fit to the
+   triangulated 3D points (`--method fit`).
+4. **Templates**: open the **fault painter** link on the page (`mesh_saliency_painter.html`), load
    `smpl_neutral_tpose.obj` (download link on the page), paint where the fault shows on the body, give it the
    same name as the error in the CSV (`knee_valgus`, `heels_up`, ... - case, spaces and punctuation don't matter),
    **Save**, then **Upload templates** with the downloaded `*_saliency.json`. Templates live in
    `two_view\saliency_templates\` and apply to every recording labelled with that error.
-4. **Watch**: the chips under the viewer are the recording's errors (dashed = no template yet); pick one or
+5. **Watch**: the chips under the viewer are the recording's errors (dashed = no template yet); pick one or
    "All errors". **When to show it**: follow squat depth (strongest at the bottom of each rep, default), the
    whole of every rep, or all the time. The timeline shows the reps (shaded), squat depth (grey) and the overlay
    strength (orange); click it or a rep chip to jump. Drag to orbit, wheel to zoom, Front/Side/Back/Top buttons,
    **Record** saves the 3D view as a .webm video.
 
-How the mesh is made (`p2s_mesh.py`): the 22 Pose2Sim markers are matched to SMPL joints, surface vertices (toes,
-heels, nose, top of head) and H36M joints regressed from the surface (pelvis, hips, neck - the convention
-MotionBERT uses). A per-frame inverse-kinematics guess (each limb bone pointed along its markers) starts an Adam
-fit of one body shape plus a pose and position per frame, with a robust marker loss, knee hinge limits and
-temporal smoothing. Good recordings fit within ~20-35 mm (`mesh/mesh.json`, shown on the page); above ~60 mm
-the page warns "3D points look wrong" - the recording's calibration or sync is off. Output in
-`<recording>\mesh\`: `smpl_params.npz` (betas, poses, translations), `verts.bin` (int16 mm vertices),
-`mesh.json`, `log.txt`; it also fills `com_mesh` / `com_final` in `advancedangles.csv` (vertex centroid,
-midpoint with the keypoint CoM - the single-view pipeline's rules).
+`<recording>\mesh\`: `verts.bin` (int16 mm vertices, (T, 6890, 3)), `mesh.json` (frames, fps, method, camera,
+facing), `log.txt`. MotionBERT's mesh is root-relative; it is turned Y-up and stood on the floor frame by frame
+(feet planted). The fit method also writes `smpl_params.npz` and fills `com_mesh` / `com_final` in
+`advancedangles.csv`.
 
 The saliency is a **painted prior** (where on the body each fault shows), timed by the squat - not a model's
 explanation. A trained classifier's per-frame saliency (Grad-CAM scaffolding in `keypoint_pipeline.py`) can be
@@ -229,7 +232,7 @@ python two_view/run_two_view.py --front-csv A.csv --side-csv B.csv --fps-front 2
 | `batch_app.py`, `web/batch.html` | Batch page (http://127.0.0.1:5050) |
 | `start_batch.ps1` | Sets up the Pose2Sim environment (GPU if present) and opens the batch page |
 | `requirements_pose2sim.txt` | Exact package versions of the Pose2Sim environment |
-| `p2s_mesh.py` | SMPL mesh fitted to `points3d.trc` (one recording or a folder of them) |
+| `p2s_mesh.py` | MotionBERT SMPL mesh from a camera's 2D keypoints (or an SMPL fit to `points3d.trc`); one recording or a folder |
 | `mesh_app.py`, `web/mesh.html`, `start_mesh_viewer.ps1` | 3D mesh + saliency viewer (http://127.0.0.1:5070) |
 | `saliency_templates/` | Painted per-error saliency maps (`<error>_saliency.json`) |
 

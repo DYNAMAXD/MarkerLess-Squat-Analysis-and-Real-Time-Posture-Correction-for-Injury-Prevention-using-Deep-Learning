@@ -1,25 +1,21 @@
 """
-p2s_mesh.py -- SMPL body mesh fitted to the Pose2Sim 3D points (points3d.trc), for a MotionBERT-style mesh view.
+p2s_mesh.py -- SMPL body mesh for a Pose2Sim run, for the mesh viewer (mesh_app.py).
 
-    C:\\Proj1Venv\\Scripts\\python.exe two_view/p2s_mesh.py <run or person folder>
+    C:\\Proj1Venv\\Scripts\\python.exe two_view/p2s_mesh.py <run or person folder | folder of them> [--camera side]
 
-The folder is a Pose2Sim run (outputs/two_view/<run>/) or a batch person folder (preprocessed_data/<person_id>/):
-it must hold points3d.trc. Writes into <folder>/mesh/:
+Default (--method motionbert): exactly the single-view pipeline's mesh stage (keypoint_pipeline.py: HALPE-26 ->
+H36M-17 -> normalised image coordinates -> MotionBERT MeshRegressor), fed with the 2D keypoints Pose2Sim already
+detected in one camera (the side camera by default: from the front, squat depth is along the line of sight and a
+single-view model underestimates it). MotionBERT's mesh is root-relative; it is
+turned Y-up and stood on the floor frame by frame (feet planted).
 
-    smpl_params.npz   betas (10), global_orient (T,3), body_pose (T,69), transl (T,3), frames (T,)  - compact
-    verts.bin         int16 vertex positions in millimetres, (T, 6890, 3), for the mesh viewer (mesh_app.py)
-    mesh.json         frame numbers, fps, fit error per marker, settings
-    log.txt
-and fills com_mesh / com_final in <folder>/advancedangles.csv (same rules as keypoint_pipeline.py: com_mesh =
-centroid of the vertices, com_final = midpoint of com_keypoints and com_mesh).
+--method fit: SMPL fitted to the triangulated 3D points (points3d.trc) instead - inverse-kinematics guess + Adam,
+markers matched to SMPL joints / surface vertices / H36M-regressed joints; also fills com_mesh / com_final in
+advancedangles.csv.
 
-How: Pose2Sim's 22 HALPE markers are matched to SMPL joints (knees, ankles, shoulders, elbows, wrists, hips,
-pelvis, neck) and SMPL surface vertices (nose, top of head, big/small toes, heels). One body shape for the whole
-video plus a pose and position per frame are optimised (Adam) to put those points on the markers, with a robust
-(Geman-McClure) marker loss, small pose / shape regularisation, hinge limits for the knees and temporal smoothness.
-The fit only evaluates the ~11 vertices it needs (much faster than full SMPL); the full mesh is computed once at
-the end. Needs the SMPL files in MotionBERT/data/mesh/ (SMPL_NEUTRAL.pkl), torch and smplx (the C:\\Proj1Venv env).
-Coordinates: metres, Y up, the same world frame as angles.csv.
+Writes <folder>/mesh/: verts.bin (int16 mm, (T, 6890, 3)), mesh.json (frames, fps, method, camera, facing),
+log.txt, done.txt (+ smpl_params.npz for fit). Needs torch, smplx, the MotionBERT mesh checkpoint and the SMPL
+files in MotionBERT/data/mesh/ (the C:\\Proj1Venv environment).
 """
 import argparse
 import csv
@@ -297,42 +293,137 @@ def fill_com_mesh(adv_csv, frames, verts):
     return True
 
 
+CAM_DIRS = {"front": "cam02_front", "side": "cam01_side"}
+FOOT_VERTS = [3216, 3226, 3387, 6617, 6624, 6787]   # big toe, small toe, heel (left, right)
+
+
+def pose2sim_trial(folder):
+    """The Pose2Sim project folder (holding pose/ and pose-associated/) of a run / person folder."""
+    import re as _re
+    log = folder / "log.txt"
+    if log.exists():
+        m = _re.search(r"\[setup\] Pose2Sim project folder: (.+)", log.read_text(encoding="utf-8", errors="replace"))
+        if m and Path(m.group(1).strip()).is_dir():
+            return Path(m.group(1).strip())
+    for cand in (folder.parent / "_work" / folder.name / "trial", ROOT / "outputs" / "pose2sim" / folder.name / "trial"):
+        if cand.is_dir():
+            return cand
+    raise FileNotFoundError(f"Pose2Sim working folder of {folder} not found (needed for the 2D keypoints)")
+
+
+def load_2d(trial, camera):
+    """Pose2Sim's 2D keypoints of one camera -> frames (N,), (N,26,3) HALPE-26 [x, y, score] in pixels.
+    pose-associated/ (the tracked person) if present, else pose/ (the most confident person per frame)."""
+    import re as _re
+    for sub in ("pose-associated", "pose"):
+        d = trial / sub / f"{CAM_DIRS[camera]}_json"
+        files = sorted(d.glob("*.json")) if d.is_dir() else []
+        if files:
+            break
+    else:
+        raise FileNotFoundError(f"no 2D keypoint JSON for the {camera} camera in {trial}")
+    frames, kp = [], []
+    for f in files:
+        m = _re.search(r"(\d+)\.json$", f.name)
+        people = json.loads(f.read_text(encoding="utf-8")).get("people") or []
+        arrs = [np.asarray(p.get("pose_keypoints_2d") or [], dtype=np.float32).reshape(-1, 3) for p in people]
+        arrs = [a for a in arrs if a.shape[0] == 26]
+        frames.append(int(m.group(1)) if m else len(frames))
+        kp.append(max(arrs, key=lambda a: a[:, 2].sum()) if arrs else np.zeros((26, 3), np.float32))
+    return np.asarray(frames), np.stack(kp), d
+
+
+def motionbert_mesh(folder, camera, logf=None):
+    """Same steps as keypoint_pipeline.py's mesh stage, on Pose2Sim's 2D keypoints of one camera:
+    HALPE-26 -> H36M-17 -> normalised image coordinates -> MotionBERT MeshRegressor (SMPL).
+    Returns vertices in metres (T,6890,3) in a Y-up frame with the feet on y = 0, frames, H36M joints, info."""
+    sys.path.insert(0, str(ROOT))
+    import keypoint_pipeline as kp
+    trial = pose2sim_trial(folder)
+    frames, k26, src = load_2d(trial, camera)
+    w, h = 1920, 1080
+    try:
+        import tomllib
+        cal = tomllib.loads((folder / "calibration.toml").read_text(encoding="utf-8"))
+        w, h = (int(round(x)) for x in next(v for k, v in cal.items() if isinstance(v, dict) and CAM_DIRS[camera] in k)["size"])
+    except Exception:  # noqa: BLE001
+        log(f"note: image size not read from calibration.toml; assuming {w}x{h}", logf)
+    seen = float((k26[:, :, 2] > 0.3).mean())
+    log(f"{len(frames)} frames of 2D keypoints from {src} ({w}x{h}); {100 * seen:.0f} % of keypoints confident", logf)
+    h36 = np.stack([kp.halpe26_to_h36m17(f) for f in k26])
+    norm = np.stack([kp.normalize_2d_for_motionbert(f, w, h) for f in h36]).astype(np.float32)
+    model, _ = kp.load_motionbert_mesh()
+    t0 = time.time()
+    verts, kp3d = kp.lift_sequence_to_mesh(model, norm)
+    log(f"MotionBERT mesh: {verts.shape[0]} frames in {time.time() - t0:.0f} s on {kp.DEVICE}; "
+        f"vertex range {np.ptp(verts[0], axis=0).round(0)} (model units)", logf)
+    scale = 0.001 if np.ptp(verts[0][:, 1]) > 50 else 1.0          # MotionBERT gives millimetres
+    flip = np.array([1.0, -1.0, -1.0])                               # image frame (y down, z away) -> y up
+    verts = verts.astype(np.float64) * scale * flip
+    kp3d = kp3d.astype(np.float64) * scale * flip
+    # MotionBERT's mesh is root-relative (pelvis fixed): stand it on the floor frame by frame (feet planted)
+    lift = -verts[:, FOOT_VERTS, 1].min(axis=1)
+    k = 5
+    pad = np.pad(lift, k // 2, mode="edge")
+    lift = np.array([np.median(pad[i:i + k]) for i in range(len(lift))])
+    verts[:, :, 1] += lift[:, None]
+    kp3d[:, :, 1] += lift[:, None]
+    return verts, frames, kp3d, {"method": "motionbert", "camera": camera, "keypoints_confident_pct": round(100 * seen, 1)}
+
+
+def facing_from_joints(kp3d):
+    """Horizontal facing direction from H36M joints (Y up): left hip - right hip x (thorax - pelvis), most upright frame."""
+    left = kp3d[:, 4] - kp3d[:, 1]
+    up = kp3d[:, 8] - kp3d[:, 0]
+    fwd = np.cross(left, up)
+    k = int(np.argmax(up[:, 1] / np.maximum(np.linalg.norm(up, axis=1), 1e-9)))
+    f = fwd[k, [0, 2]]
+    return (f / max(np.linalg.norm(f), 1e-9)).round(4).tolist()
+
+
 def process(folder, a):
-    """Fit + write the mesh files of one run / person folder. Returns True on success."""
-    trc = folder / "points3d.trc"
+    """Make + write the mesh files of one run / person folder. Returns True on success."""
     out = folder / "mesh"
     out.mkdir(exist_ok=True)
     (out / "done.txt").unlink(missing_ok=True)
     logf = open(out / "log.txt", "w", encoding="utf-8")
     try:
-        if not trc.exists():
-            raise FileNotFoundError(f"{trc} not found (run the Pose2Sim analysis first)")
         if not SMPL_PKL.exists():
             raise FileNotFoundError(f"SMPL model not found at {SMPL_PKL} (see keypoint_pipeline.check_smpl_assets)")
-        model, p, quality = fit(trc, tuple(int(x) for x in a.iters.split(",")), logf=logf)
-        if quality["mean_err_mm"] > 60:
-            log("WARNING: the body fits the 3D points badly (good recordings: ~20-35 mm). The 3D points probably do "
-                "not look like a body - check this recording's calibration and clap sync.", logf)
-        np.savez_compressed(out / "smpl_params.npz", **p)
-        verts = full_vertices(model, p)
-        np.clip(np.round(verts * 1000), -32767, 32767).astype("<i2").tofile(out / "verts.bin")
         fps = 30.0
         try:
             fps = float(json.loads((folder / "results.json").read_text(encoding="utf-8"))["fps"]["p3d"])
         except Exception:  # noqa: BLE001
             pass
-        floor = float(np.percentile(verts[:, :, 1].min(axis=1), 5))  # lowest point of the body ~ the floor
-        # facing direction (horizontal) in the most upright frame (straightest knees): the body's +Z axis
-        from scipy.spatial.transform import Rotation
-        k = int(np.argmin(np.abs(p["body_pose"][:, 9]) + np.abs(p["body_pose"][:, 12])))
-        fwd = Rotation.from_rotvec(p["global_orient"][k]).as_matrix()[:, 2]
-        fwd_xz = (fwd[[0, 2]] / max(np.linalg.norm(fwd[[0, 2]]), 1e-9)).round(4).tolist()
+        if a.method == "motionbert":
+            log(f"MotionBERT mesh from the {a.camera} camera's 2D keypoints", logf)
+            verts, frames, kp3d, info = motionbert_mesh(folder, a.camera, logf)
+            facing, floor, quality = facing_from_joints(kp3d), 0.0, {"mean_err_mm": None}
+        else:
+            trc = folder / "points3d.trc"
+            if not trc.exists():
+                raise FileNotFoundError(f"{trc} not found (run the Pose2Sim analysis first)")
+            log("SMPL fitted to the triangulated 3D points", logf)
+            model, p, quality = fit(trc, tuple(int(x) for x in a.iters.split(",")), logf=logf)
+            if quality["mean_err_mm"] > 60:
+                log("WARNING: the body fits the 3D points badly (good recordings: ~20-35 mm). The 3D points probably do "
+                    "not look like a body - check this recording's calibration and clap sync.", logf)
+            np.savez_compressed(out / "smpl_params.npz", **p)
+            verts, frames = full_vertices(model, p), p["frames"]
+            floor = float(np.percentile(verts[:, :, 1].min(axis=1), 5))  # lowest point of the body ~ the floor
+            # facing direction (horizontal) in the most upright frame (straightest knees): the body's +Z axis
+            from scipy.spatial.transform import Rotation
+            k = int(np.argmin(np.abs(p["body_pose"][:, 9]) + np.abs(p["body_pose"][:, 12])))
+            fwd = Rotation.from_rotvec(p["global_orient"][k]).as_matrix()[:, 2]
+            facing = (fwd[[0, 2]] / max(np.linalg.norm(fwd[[0, 2]]), 1e-9)).round(4).tolist()
+            info = {"method": "fit", "camera": None}
+            if not a.no_com and fill_com_mesh(folder / "advancedangles.csv", frames, verts):
+                log("filled com_mesh / com_final in advancedangles.csv", logf)
+        np.clip(np.round(verts * 1000), -32767, 32767).astype("<i2").tofile(out / "verts.bin")
         (out / "mesh.json").write_text(json.dumps({
-            "frames": [int(f) for f in p["frames"]], "fps": fps, "n_frames": int(len(p["frames"])), "n_verts": 6890,
-            "units": "mm", "up": "y", "floor_y_mm": round(floor * 1000, 1), "facing_xz": fwd_xz, **quality,
+            "frames": [int(f) for f in frames], "fps": fps, "n_frames": int(len(frames)), "n_verts": 6890,
+            "units": "mm", "up": "y", "floor_y_mm": round(floor * 1000, 1), "facing_xz": facing, **info, **quality,
             "created": time.strftime("%Y-%m-%d %H:%M:%S")}), encoding="utf-8")
-        if not a.no_com and fill_com_mesh(folder / "advancedangles.csv", p["frames"], verts):
-            log("filled com_mesh / com_final in advancedangles.csv", logf)
         log(f"wrote {out / 'verts.bin'} ({verts.shape[0]} frames, {(out / 'verts.bin').stat().st_size / 1e6:.0f} MB)", logf)
         (out / "done.txt").write_text("ok", encoding="utf-8")
         return True
@@ -346,20 +437,26 @@ def process(folder, a):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("folder", help="run / person folder holding points3d.trc, or a folder of them "
+    ap.add_argument("folder", help="run / person folder (with points3d.trc), or a folder of them "
                                    "(e.g. preprocessed_data: every person without a mesh yet)")
-    ap.add_argument("--iters", default="150,1500", help="iterations of stage 1 (position, shape) and stages 2+3 (all)")
-    ap.add_argument("--no-com", action="store_true", help="do not fill com_mesh / com_final in advancedangles.csv")
-    ap.add_argument("--redo", action="store_true", help="folder of persons: also refit those that have a mesh")
+    ap.add_argument("--method", default="motionbert", choices=["motionbert", "fit"],
+                    help="motionbert = MotionBERT's mesh model on one camera's 2D keypoints (like the single-view "
+                         "pipeline); fit = SMPL fitted to the triangulated 3D points")
+    ap.add_argument("--camera", default="side", choices=["front", "side"],
+                    help="motionbert: which camera's 2D keypoints (side: squat depth is visible; from the front it is "
+                         "along the line of sight and MotionBERT underestimates it)")
+    ap.add_argument("--iters", default="150,1500", help="fit: iterations of stage 1 (position, shape) and stages 2+3")
+    ap.add_argument("--no-com", action="store_true", help="fit: do not fill com_mesh / com_final in advancedangles.csv")
+    ap.add_argument("--redo", action="store_true", help="folder of persons: also redo those that have a mesh")
     a = ap.parse_args()
     folder = Path(a.folder).resolve()
     if (folder / "points3d.trc").exists():
         sys.exit(0 if process(folder, a) else 1)
     todo = sorted(d for d in folder.iterdir() if d.is_dir() and (d / "points3d.trc").exists()
                   and (a.redo or not (d / "mesh" / "done.txt").exists()))
-    print(f"{len(todo)} folders to fit in {folder}", flush=True)
+    print(f"{len(todo)} folders to do in {folder}", flush=True)
     failed = [d.name for k, d in enumerate(todo, 1) if not (print(f"[{k}/{len(todo)}] {d.name}", flush=True) or process(d, a))]
-    print(f"done; {len(todo) - len(failed)} fitted" + (f", failed: {failed}" if failed else ""), flush=True)
+    print(f"done; {len(todo) - len(failed)} meshes" + (f", failed: {failed}" if failed else ""), flush=True)
     sys.exit(1 if failed else 0)
 
 

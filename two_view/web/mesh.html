@@ -73,7 +73,7 @@ code{background:#2a2a2a;padding:1px 5px;border-radius:4px}
   <header>
     <div>
       <h1>Squat <span>Mesh</span></h1>
-      <p>SMPL body fitted to the two-camera 3D points, with each error's saliency map on the moving body.</p>
+      <p>MotionBERT SMPL mesh from the preprocessing keypoints, with each error's saliency map on the moving body.</p>
     </div>
     <div class="note" id="status"></div>
   </header>
@@ -273,11 +273,14 @@ async function openPerson(path){
   $('over').classList.remove('hidden'); $('over').innerHTML = '<div>Opening&hellip;</div>';
   P = await api('/api/person?path=' + encodeURIComponent(path));
   $('pName').textContent = P.name;
-  $('pInfo').innerHTML = P.mesh ? `${P.mesh.n_frames} frames · ${P.fps.toFixed(2)} fps · fit error ${P.mesh.mean_err_mm} mm · ${P.reps.length} reps` +
-    (P.mesh.mean_err_mm > 60 ? ' <span class="tag err" title="A good recording fits within ~20-35 mm. A large error means the 3D points do not look like a body: check this recording\'s calibration / clap sync in its log.">3D points look wrong</span>' : '') : '';
+  $('pInfo').innerHTML = P.mesh ? `${P.mesh.n_frames} frames · ${P.fps.toFixed(2)} fps · ${P.reps.length} reps · ` +
+    (P.mesh.method === 'fit' ? `fitted to the 3D points (${P.mesh.mean_err_mm} mm)` : `MotionBERT · ${P.mesh.camera || 'front'} camera`) +
+    ' <button class="ghost" id="rebuild" style="padding:2px 9px;font-size:12px">Rebuild…</button>' +
+    (P.mesh.method === 'fit' && P.mesh.mean_err_mm > 60 ? ' <span class="tag err" title="A good recording fits within ~20-35 mm. A large error means the 3D points do not look like a body: check this recording\'s calibration / clap sync in its log.">3D points look wrong</span>' : '') : '';
   ['F', 'S'].forEach((k, i) => { const v = $('v' + k), name = ['front', 'side'][i];
     v.src = P.videos.includes(name) ? `/api/file?path=${encodeURIComponent(path)}&name=${name}.mp4` : ''; v.parentElement.classList.toggle('hidden', !P.videos.includes(name)); });
   renderErrChips();
+  if ($('rebuild')) $('rebuild').onclick = () => { stop(); P.mesh_state = 'none'; showBuild(true); };
   if (P.mesh_state !== 'done'){ showBuild(); return; }
   $('buildPanel').classList.add('hidden');
   await loadFaces();
@@ -298,14 +301,21 @@ async function openPerson(path){
   $('scrub').max = duration(); $('over').classList.add('hidden');
   renderReps(); setView('front'); seek(0);
 }
-function showBuild(){
-  $('buildPanel').classList.remove('hidden');
+function showBuild(rebuild){
+  $('buildPanel').classList.remove('hidden'); $('over').classList.remove('hidden');
   const state = P.mesh_state;
   $('buildTag').className = 'tag ' + ({building: 'run', error: 'err'}[state] || '');
   $('buildTag').textContent = {none: 'not built yet', building: 'building…', error: 'failed'}[state] || state;
-  $('over').innerHTML = state === 'building' ? '<div>Building the 3D mesh (about a minute)&hellip;</div>'
-    : `<div>${state === 'error' ? 'The mesh build failed (log below).' : 'This recording has no 3D mesh yet.'}</div><button class="btn" id="buildBtn">Build 3D mesh</button><div class="note">Fits the SMPL body to points3d.trc &mdash; about a minute on a CPU.</div>`;
-  if ($('buildBtn')) $('buildBtn').onclick = async () => { await api('/api/mesh/build', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({path: P.path})}); P.mesh_state = 'building'; showBuild(); };
+  $('over').innerHTML = state === 'building' ? '<div>Building the 3D mesh&hellip;</div>'
+    : `<div>${rebuild ? 'Make the mesh again:' : state === 'error' ? 'The mesh build failed (log below).' : 'This recording has no 3D mesh yet.'}</div>
+       <select id="buildSrc" style="max-width:420px">
+         <option value="motionbert|side">MotionBERT on the side camera's 2D keypoints (recommended for squats)</option>
+         <option value="motionbert|front">MotionBERT on the front camera's 2D keypoints</option>
+         <option value="fit|">SMPL fitted to the triangulated 3D points</option></select>
+       <button class="btn" id="buildBtn">Build 3D mesh</button>
+       <div class="note">MotionBERT: ~15 s on a CPU, same model as the single-view pipeline. From the front, squat depth is along the camera's line of sight, so the side camera shows it better.</div>`;
+  if ($('buildBtn')) $('buildBtn').onclick = async () => { const [method, camera] = $('buildSrc').value.split('|');
+    await api('/api/mesh/build', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({path: P.path, method, camera})}); P.mesh_state = 'building'; showBuild(); };
   clearInterval(buildTimer);
   if (state === 'building') buildTimer = setInterval(async () => {
     const s = await api('/api/mesh/status?path=' + encodeURIComponent(P.path));
