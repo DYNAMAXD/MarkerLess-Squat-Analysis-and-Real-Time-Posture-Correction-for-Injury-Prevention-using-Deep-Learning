@@ -275,6 +275,12 @@ def file():
 
 if __name__ == "__main__":
     port = int(os.environ.get("BATCH_PORT", "5050"))
+    import socket
+    with socket.socket() as s:  # on Windows a second server can bind the same port and old code keeps answering
+        if s.connect_ex(("127.0.0.1", port)) == 0:
+            print(f"The batch page is already running at http://127.0.0.1:{port} - close that window first "
+                  "(or just open the address).")
+            sys.exit(1)
     print(f"Batch preprocessing page: http://127.0.0.1:{port}   (Ctrl+C or close this window to stop the page;"
           " a running batch keeps going only while this window is open)")
     app.run(host="127.0.0.1", port=port, debug=False, threaded=True)

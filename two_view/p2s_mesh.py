@@ -361,6 +361,23 @@ def motionbert_mesh(folder, camera, logf=None):
     flip = np.array([1.0, -1.0, -1.0])                               # image frame (y down, z away) -> y up
     verts = verts.astype(np.float64) * scale * flip
     kp3d = kp3d.astype(np.float64) * scale * flip
+    # MotionBERT orients the body relative to the camera, so a camera pitched down tilts the whole body (~8 deg on
+    # the side camera). Level it: the floor normal = median over frames of the plane through the 6 sole vertices
+    # (median, so a few heels-up frames do not matter), rotated onto +Y for the whole recording.
+    normals = []
+    for v in verts[:, FOOT_VERTS]:
+        c = v.mean(0)
+        n = np.linalg.svd(v - c)[2][2]
+        normals.append(n if n[1] >= 0 else -n)
+    up = np.median(normals, axis=0)
+    up /= np.linalg.norm(up)
+    from scipy.spatial.transform import Rotation
+    axis = np.cross(up, [0.0, 1.0, 0.0])
+    ang = np.arcsin(np.clip(np.linalg.norm(axis), 0, 1))
+    if ang > 1e-4:
+        R = Rotation.from_rotvec(axis / np.linalg.norm(axis) * ang).as_matrix()
+        verts, kp3d = verts @ R.T, kp3d @ R.T
+    log(f"levelled the body: the soles were tilted {np.degrees(ang):.1f} deg from the floor", logf)
     # MotionBERT's mesh is root-relative (pelvis fixed): stand it on the floor frame by frame (feet planted)
     lift = -verts[:, FOOT_VERTS, 1].min(axis=1)
     k = 5

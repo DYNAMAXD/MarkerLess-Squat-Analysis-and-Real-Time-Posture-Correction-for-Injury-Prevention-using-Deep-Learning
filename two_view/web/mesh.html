@@ -109,6 +109,7 @@ code{background:#2a2a2a;padding:1px 5px;border-radius:4px}
               <div class="corner">
                 <button class="ghost" data-view="front">Front</button><button class="ghost" data-view="side">Side</button>
                 <button class="ghost" data-view="back">Back</button><button class="ghost" data-view="top">Top</button>
+                <select id="look" class="ghost" style="width:auto" title="How the body is drawn"><option value="sport">Sportswear</option><option value="mannequin">Mannequin</option><option value="skin">Skin</option></select>
               </div>
               <div class="fault" id="faultLbl"></div>
               <div class="legend" id="legend">saliency<i></i>low &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; high</div>
@@ -169,7 +170,18 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;
 const key = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const api = async (url, opt) => { const r = await fetch(url, opt); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || r.statusText); return j; };
-const NV = 6890, BASE = [0.65, 0.74, 0.85];
+const NV = 6890;
+// body colours: the bare SMPL body dressed by vertex colour (garment codes from /api/clothes.bin: 0 skin, 1 shirt, 2 shorts)
+const LOOKS = {sport: [[0.86, 0.75, 0.66], [0.80, 0.82, 0.86], [0.30, 0.32, 0.37]],
+               mannequin: [[0.74, 0.76, 0.80], [0.74, 0.76, 0.80], [0.74, 0.76, 0.80]],
+               skin: [[0.86, 0.75, 0.66], [0.86, 0.75, 0.66], [0.86, 0.75, 0.66]]};
+let clothes = new Uint8Array(NV), base = new Float32Array(NV * 3);
+function setLook(look){
+  const L = LOOKS[look] || LOOKS.sport;
+  for (let v = 0; v < NV; v++){ const c = L[clothes[v]] || L[0]; base[v * 3] = c[0]; base[v * 3 + 1] = c[1]; base[v * 3 + 2] = c[2]; }
+}
+setLook('mannequin');  // until the garment codes arrive
+fetch('/api/clothes.bin').then(r => r.arrayBuffer()).then(b => { clothes = new Uint8Array(b); setLook($('look').value); refresh(); }).catch(() => {});
 const store = { get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k, v){ try{ localStorage.setItem(k, v); }catch(e){} } };
 
 // ------------------------------------------------------------- three.js scene
@@ -400,9 +412,10 @@ function paint(row){
   geom.attributes.position.needsUpdate = true; geom.computeVertexNormals();
   const m = curMap(), w = m ? weights()[P.mesh.frames[row]] || 0 : 0, gain = +$('gain').value, thr = +$('thr').value;
   for (let v = 0; v < NV; v++){
-    let c = BASE;
-    if (m){ const s = Math.min(1, m[v] * w * gain); if (s > thr){ const j = jet(s), a = Math.min(1, s * 1.6); c = [BASE[0] * (1 - a) + j[0] * a, BASE[1] * (1 - a) + j[1] * a, BASE[2] * (1 - a) + j[2] * a]; } }
-    col[v * 3] = c[0]; col[v * 3 + 1] = c[1]; col[v * 3 + 2] = c[2];
+    const b0 = base[v * 3], b1 = base[v * 3 + 1], b2 = base[v * 3 + 2];
+    let c0 = b0, c1 = b1, c2 = b2;
+    if (m){ const s = Math.min(1, m[v] * w * gain); if (s > thr){ const j = jet(s), a = Math.min(1, s * 1.6); c0 = b0 * (1 - a) + j[0] * a; c1 = b1 * (1 - a) + j[1] * a; c2 = b2 * (1 - a) + j[2] * a; } }
+    col[v * 3] = c0; col[v * 3 + 1] = c1; col[v * 3 + 2] = c2;
   }
   geom.attributes.color.needsUpdate = true;
   const name = !m ? '' : active === 'all' ? 'All errors' : (tpl[active] || {}).name || '';
@@ -411,6 +424,8 @@ function paint(row){
 }
 ['gain', 'thr'].forEach(k => { const upd = () => { $(k + 'V').textContent = (+$(k).value).toFixed(2); refresh(); }; $(k).oninput = upd; $(k + 'V').textContent = (+$(k).value).toFixed(2); });
 $('tmode').onchange = () => refresh();
+$('look').value = store.get('meshLook') || 'sport';
+$('look').onchange = () => { store.set('meshLook', $('look').value); setLook($('look').value); refresh(); };
 function refresh(){ if (verts && curRow >= 0){ paint(curRow); draw(); drawTimeline(); } }
 
 // ------------------------------------------------------------- time / playback
