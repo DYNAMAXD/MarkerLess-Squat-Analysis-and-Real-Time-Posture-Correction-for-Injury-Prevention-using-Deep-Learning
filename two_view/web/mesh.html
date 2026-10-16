@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Squat Mesh Viewer</title>
+<style>
+:root{
+  --bg:#0B0B0B; --panel:#1F1F1F; --panel2:#161616; --line:#333; --text:#F5F5F5; --muted:#9A9A9A;
+  --accent:#FF7C00; --accent-soft:rgba(255,124,0,.14); --ok:#4cd07d; --warn:#f2c14e; --bad:#ff5c5c; --front:#4DA3FF;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.page{max-width:1800px;margin:auto;padding:20px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap}
+header h1{margin:0;font-size:26px} header h1 span{color:var(--accent)}
+header p{margin:2px 0 0;color:var(--muted)}
+.layout{display:grid;grid-template-columns:330px minmax(0,1fr);gap:18px;align-items:start}
+@media(max-width:1000px){.layout{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+.title{font-size:16px;font-weight:700;margin:0 0 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;color:var(--muted);margin:12px 0 6px}
+input[type=text],select{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);outline:none;font:inherit}
+input[type=text]:focus,select:focus{border-color:var(--text)}
+button{font:inherit;cursor:pointer}
+.btn{padding:9px 14px;border-radius:9px;border:0;background:var(--accent);color:#111;font-weight:800}
+.btn:hover{filter:brightness(1.1)} .btn:disabled{background:#444;color:#888;cursor:not-allowed}
+.ghost{background:#2a2a2a;border:1px solid var(--line);color:var(--text);padding:6px 11px;border-radius:8px;font-size:13px}
+.ghost:hover,.ghost.on{border-color:var(--accent);color:var(--accent)}
+.note{color:var(--muted);font-size:12px}
+.tag{font-size:11px;padding:2px 8px;border-radius:20px;background:#333;color:var(--muted);white-space:nowrap}
+.tag.ok{background:rgba(76,208,125,.15);color:var(--ok)} .tag.run{background:var(--accent-soft);color:var(--accent)}
+.tag.err{background:rgba(255,92,92,.15);color:var(--bad)}
+.hidden{display:none!important}
+.person{padding:9px 10px;border-radius:8px;cursor:pointer;border:1px solid transparent;margin-bottom:4px}
+.person:hover{background:var(--panel2)} .person.on{background:var(--accent-soft);border-color:var(--accent)}
+.person .nm{font-weight:600;display:flex;justify-content:space-between;gap:6px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.chip{padding:4px 11px;border-radius:20px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:12px;cursor:pointer}
+.chip:hover,.chip.on{border-color:var(--accent);background:var(--accent-soft)}
+.chip.missing{color:var(--muted);border-style:dashed}
+.chip small{color:var(--muted)}
+.view{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:14px}
+@media(max-width:1250px){.view{grid-template-columns:1fr}}
+#stage{position:relative;background:#111;border:1px solid var(--line);border-radius:12px;overflow:hidden;aspect-ratio:4/3;min-height:360px}
+#stage canvas{display:block;width:100%;height:100%;cursor:grab}
+#stage .over{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--muted);text-align:center;padding:20px;background:rgba(10,10,10,.85)}
+#stage .corner{position:absolute;left:10px;top:8px;display:flex;gap:6px;flex-wrap:wrap}
+#stage .legend{position:absolute;right:12px;bottom:10px;font-size:11px;color:var(--muted);text-align:right}
+#stage .legend i{display:block;width:150px;height:9px;border-radius:5px;margin:3px 0;background:linear-gradient(90deg,#0000ff,#00ffff,#00ff00,#ffff00,#ff0000)}
+#stage .fault{position:absolute;left:12px;bottom:10px;font-size:13px;font-weight:700;background:rgba(0,0,0,.6);padding:3px 10px;border-radius:20px}
+.vids{display:flex;flex-direction:column;gap:10px}
+.vbox{background:#000;border:1px solid var(--line);border-radius:10px;overflow:hidden;position:relative}
+.vbox video{width:100%;display:block;aspect-ratio:16/9;object-fit:contain;background:#000}
+.vbox .vt{position:absolute;left:8px;top:6px;background:rgba(0,0,0,.65);padding:1px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.transport{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.transport input[type=range]{flex:1;min-width:180px;accent-color:var(--accent)}
+.play{width:40px;height:40px;border-radius:50%;border:0;background:var(--accent);color:#111;font-size:15px;font-weight:800}
+.time{font-variant-numeric:tabular-nums;color:var(--muted);min-width:105px;text-align:right}
+#timeline{width:100%;height:56px;display:block;margin-top:10px;border-radius:8px;background:var(--panel2);cursor:pointer}
+.row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.row input[type=range]{flex:1;accent-color:var(--accent)}
+.row .val{min-width:36px;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px}
+pre{background:#050505;border:1px solid var(--line);color:#c9f7d3;padding:10px;border-radius:8px;max-height:220px;overflow:auto;font-size:12px;white-space:pre-wrap;margin:8px 0 0;text-align:left;width:100%}
+.tpl{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px}
+.tpl button{background:none;border:0;color:var(--muted)} .tpl button:hover{color:var(--bad)}
+a{color:var(--front)}
+code{background:#2a2a2a;padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div>
+      <h1>Squat <span>Mesh</span></h1>
+      <p>MotionBERT SMPL mesh from the preprocessing keypoints, with each error's saliency map on the moving body.</p>
+    </div>
+    <div class="note" id="status"></div>
+  </header>
+
+  <div class="layout">
+    <aside>
+      <div class="panel">
+        <div class="title">Recordings</div>
+        <div class="label">Folder with runs / persons</div>
+        <input type="text" id="root" placeholder="(default) outputs\two_view   or   D:\dataset\preprocessed_data">
+        <button class="ghost" id="loadRoot" style="margin-top:8px;width:100%">Load folder</button>
+        <div id="people" style="margin-top:10px" class="note">&ndash;</div>
+      </div>
+
+      <div class="panel">
+        <div class="title">Saliency templates</div>
+        <div class="note">One map per error, painted on the SMPL T-pose in the <a href="/painter" target="_blank">fault painter</a>
+          (load <a href="/smpl_neutral_tpose.obj">smpl_neutral_tpose.obj</a> there, paint, name it like the error in the CSV, Save) &mdash; then upload the saved <code>*_saliency.json</code> here.</div>
+        <input type="file" id="tplFiles" accept=".json,application/json" multiple hidden>
+        <button class="ghost" id="tplUpload" style="margin-top:8px;width:100%">Upload templates&hellip;</button>
+        <div id="tplList" style="margin-top:8px"></div>
+        <div class="note" id="tplFolder" style="margin-top:6px"></div>
+      </div>
+    </aside>
+
+    <main>
+      <div class="panel">
+        <div class="title"><span id="pName">No recording open</span> <span class="note" id="pInfo"></span></div>
+        <div class="view">
+          <div>
+            <div id="stage">
+              <canvas id="gl"></canvas>
+              <div class="corner">
+                <button class="ghost" data-view="front">Front</button><button class="ghost" data-view="side">Side</button>
+                <button class="ghost" data-view="back">Back</button><button class="ghost" data-view="top">Top</button>
+              </div>
+              <div class="fault" id="faultLbl"></div>
+              <div class="legend" id="legend">saliency<i></i>low &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; high</div>
+              <div class="over" id="over"><div>Pick a recording on the left.</div></div>
+            </div>
+            <div class="transport">
+              <button class="play" id="play" title="Play / pause (space)">&#9654;</button>
+              <input type="range" id="scrub" min="0" max="1" step="0.001" value="0">
+              <span class="time" id="tlabel">0.00 / 0.00 s</span>
+              <select id="speed" style="width:auto"><option value="0.25">0.25&times;</option><option value="0.5">0.5&times;</option><option value="1" selected>1&times;</option></select>
+              <button class="ghost" id="rec" title="Record the 3D view to a .webm video">&#9679; Record</button>
+            </div>
+            <canvas id="timeline" title="Squat reps (shaded) and the strength of the error overlay over time; click to jump"></canvas>
+            <div class="chips" id="repChips"></div>
+          </div>
+          <div class="vids" id="vids">
+            <div class="vbox"><span class="vt" style="color:var(--front)">FRONT</span><video id="vF" muted playsinline preload="auto"></video></div>
+            <div class="vbox"><span class="vt" style="color:var(--accent)">SIDE</span><video id="vS" muted playsinline preload="auto"></video></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" id="salPanel">
+        <div class="title">Errors &amp; saliency overlay</div>
+        <div class="note">Errors from this recording's labels (CSV <code>error_performed</code>). A dashed chip has no painted template yet.</div>
+        <div class="chips" id="errChips"></div>
+        <div class="label">Preview any template</div>
+        <select id="anyTpl"><option value="">&ndash;</option></select>
+        <div class="two" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <div class="label">When to show it</div>
+            <select id="tmode">
+              <option value="depth">Follow squat depth (strongest at the bottom of each rep)</option>
+              <option value="rep">Whole of every rep</option>
+              <option value="always">All the time</option>
+            </select>
+          </div>
+          <div>
+            <div class="label">Look</div>
+            <div class="row">Strength <input type="range" id="gain" min="0.2" max="2" step="0.05" value="1"><span class="val" id="gainV"></span></div>
+            <div class="row">Hide below <input type="range" id="thr" min="0" max="0.6" step="0.01" value="0.05"><span class="val" id="thrV"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel hidden" id="buildPanel">
+        <div class="title">3D mesh <span class="tag" id="buildTag"></span></div>
+        <pre id="buildLog"></pre>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="/vendor/three.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const key = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const api = async (url, opt) => { const r = await fetch(url, opt); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || r.statusText); return j; };
+const NV = 6890;
+const BASE = [0.74, 0.76, 0.80];  // plain grey mannequin
+const store = { get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k, v){ try{ localStorage.setItem(k, v); }catch(e){} } };
+
+// ------------------------------------------------------------- three.js scene
+const canvas = $('gl');
+const renderer = new THREE.WebGLRenderer({canvas, antialias: true, preserveDrawingBuffer: true});
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x111111);
+const camera = new THREE.PerspectiveCamera(35, 4 / 3, 0.01, 100);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x333333, 0.85));
+const sun = new THREE.DirectionalLight(0xffffff, 0.75); scene.add(sun);
+let grid = null, geom = null, mesh = null, faces = null;
+const orbit = {target: new THREE.Vector3(0, 0.9, 0), r: 3.2, theta: 0, phi: 0.12, facing: 0};
+function placeCamera(){
+  const {target: t, r, theta, phi} = orbit;
+  camera.position.set(t.x + r * Math.sin(theta) * Math.cos(phi), t.y + r * Math.sin(phi), t.z + r * Math.cos(theta) * Math.cos(phi));
+  camera.lookAt(t);
+  sun.position.copy(camera.position).add(new THREE.Vector3(0, 2, 0));
+}
+function setView(v){
+  const f = orbit.facing;
+  if (v === 'front'){ orbit.theta = f; orbit.phi = 0.12; }
+  if (v === 'side'){ orbit.theta = f + Math.PI / 2; orbit.phi = 0.12; }
+  if (v === 'back'){ orbit.theta = f + Math.PI; orbit.phi = 0.12; }
+  if (v === 'top'){ orbit.phi = 1.35; }
+  placeCamera(); draw();
+}
+document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => setView(b.dataset.view));
+let drag = null;
+canvas.addEventListener('pointerdown', e => { drag = {x: e.clientX, y: e.clientY}; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; });
+canvas.addEventListener('pointerup', e => { drag = null; canvas.style.cursor = 'grab'; });
+canvas.addEventListener('pointermove', e => {
+  if (!drag) return;
+  orbit.theta -= (e.clientX - drag.x) * 0.008; orbit.phi = clamp(orbit.phi + (e.clientY - drag.y) * 0.006, -0.3, 1.45);
+  drag = {x: e.clientX, y: e.clientY}; placeCamera(); draw();
+});
+canvas.addEventListener('wheel', e => { e.preventDefault(); orbit.r = clamp(orbit.r * Math.pow(1.1, Math.sign(e.deltaY)), 0.8, 12); placeCamera(); draw(); }, {passive: false});
+function resize(){
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!w || !h) return;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); draw();
+}
+new ResizeObserver(resize).observe(canvas);
+function draw(){ renderer.render(scene, camera); }
+
+// ------------------------------------------------------------- recording data
+let P = null;              // /api/person
+let verts = null, T = 0;   // Int16Array (T*NV*3), mm
+let idxOf = null;          // frame number -> mesh row
+let weightCache = {};      // temporal weights per mode
+let curRow = -1;
+const tpl = {};            // key -> {name, file, sal: Float32Array (0..1)}
+let tplRows = [];
+let active = null;         // 'all' | template key
+async function loadFaces(){
+  if (faces) return faces;
+  const buf = await (await fetch('/api/faces.bin')).arrayBuffer();
+  faces = new Uint16Array(buf); return faces;
+}
+function buildMesh(){
+  if (mesh){ scene.remove(mesh); geom.dispose(); }
+  geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NV * 3), 3).setUsage(THREE.DynamicDrawUsage));
+  geom.setAttribute('color', new THREE.BufferAttribute(new Float32Array(NV * 3), 3).setUsage(THREE.DynamicDrawUsage));
+  geom.setIndex(new THREE.BufferAttribute(faces, 1));
+  mesh = new THREE.Mesh(geom, new THREE.MeshStandardMaterial({vertexColors: true, roughness: 0.75, metalness: 0.0, side: THREE.DoubleSide}));
+  mesh.frustumCulled = false;  // the vertices move every frame; bounds computed from the first (empty) frame would hide it
+  scene.add(mesh);
+}
+async function fetchWithProgress(url, label){
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`${label}: ${r.status}`);
+  const total = +r.headers.get('Content-Length') || 0, reader = r.body.getReader(), parts = []; let got = 0;
+  for (;;){ const {done, value} = await reader.read(); if (done) break; parts.push(value); got += value.length;
+    $('over').innerHTML = `<div>Loading ${label}&hellip; ${(got / 1e6).toFixed(0)}${total ? ' / ' + (total / 1e6).toFixed(0) : ''} MB</div>`; }
+  const out = new Uint8Array(got); let o = 0; for (const p of parts){ out.set(p, o); o += p.length; }
+  return out.buffer;
+}
+
+// ------------------------------------------------------------- recordings list
+async function loadRoot(){
+  const root = $('root').value.trim(); store.set('meshRoot', root);
+  try{
+    const d = await api('/api/folders' + (root ? '?root=' + encodeURIComponent(root) : ''));
+    if (!root) $('root').placeholder = d.root;
+    $('people').innerHTML = d.folders.length ? d.folders.map(f => `<div class="person" data-path="${esc(f.path)}">
+        <div class="nm"><span>${esc(f.name)}</span>${{done:'<span class="tag ok">mesh</span>', building:'<span class="tag run">building</span>', error:'<span class="tag err">mesh failed</span>'}[f.mesh] || '<span class="tag">no mesh</span>'}</div>
+        <div class="chips">${f.errors.map(e => `<span class="tag ${f.errors_with_template.includes(e) ? 'ok' : ''}">${esc(e)}</span>`).join('') || '<span class="note">no errors labelled</span>'}</div></div>`).join('')
+      : '<span class="note">No folders with points3d.trc here.</span>';
+    document.querySelectorAll('.person').forEach(el => el.onclick = () => openPerson(el.dataset.path));
+    const last = store.get('meshPerson');
+    if (last && !P && d.folders.some(f => f.path === last)) openPerson(last);
+  }catch(e){ $('people').innerHTML = `<span class="tag err">${esc(e.message)}</span>`; }
+}
+$('loadRoot').onclick = loadRoot;
+$('root').value = store.get('meshRoot') || '';
+
+let buildTimer = null;
+async function openPerson(path){
+  stop(); store.set('meshPerson', path);
+  document.querySelectorAll('.person').forEach(el => el.classList.toggle('on', el.dataset.path === path));
+  $('over').classList.remove('hidden'); $('over').innerHTML = '<div>Opening&hellip;</div>';
+  P = await api('/api/person?path=' + encodeURIComponent(path));
+  $('pName').textContent = P.name;
+  $('pInfo').innerHTML = P.mesh ? `${P.mesh.n_frames} frames · ${P.fps.toFixed(2)} fps · ${P.reps.length} reps · ` +
+    (P.mesh.method === 'fit' ? `fitted to the 3D points (${P.mesh.mean_err_mm} mm)` : `MotionBERT · ${P.mesh.camera || 'front'} camera`) +
+    ' <button class="ghost" id="rebuild" style="padding:2px 9px;font-size:12px">Rebuild…</button>' +
+    (P.mesh.method === 'fit' && P.mesh.mean_err_mm > 60 ? ' <span class="tag err" title="A good recording fits within ~20-35 mm. A large error means the 3D points do not look like a body: check this recording\'s calibration / clap sync in its log.">3D points look wrong</span>' : '') : '';
+  ['F', 'S'].forEach((k, i) => { const v = $('v' + k), name = ['front', 'side'][i];
+    v.src = P.videos.includes(name) ? `/api/file?path=${encodeURIComponent(path)}&name=${name}.mp4` : ''; v.parentElement.classList.toggle('hidden', !P.videos.includes(name)); });
+  renderErrChips();
+  if ($('rebuild')) $('rebuild').onclick = () => { stop(); P.mesh_state = 'none'; showBuild(true); };
+  if (P.mesh_state !== 'done'){ showBuild(); return; }
+  $('buildPanel').classList.add('hidden');
+  await loadFaces();
+  const buf = await fetchWithProgress(`/api/file?path=${encodeURIComponent(path)}&name=mesh/verts.bin`, '3D mesh');
+  verts = new Int16Array(buf); T = verts.length / (NV * 3);
+  idxOf = new Map(P.mesh.frames.map((f, i) => [f, i]));
+  buildMesh();
+  // camera: aim at the body, face it
+  // aim between the floor and the top of the head (highest point over the recording), centred on the body
+  let sx = 0, sz = 0, top = -1e9; for (let v = 0; v < NV; v++){ sx += verts[v * 3]; sz += verts[v * 3 + 2]; }
+  for (let i = 1; i < verts.length; i += 3 * 29) top = Math.max(top, verts[i]);
+  const floorY = (P.mesh.floor_y_mm || 0) / 1000;
+  orbit.target.set(sx / NV / 1000, (floorY + top / 1000) / 2, sz / NV / 1000); orbit.r = 3.6;
+  const fx = (P.mesh.facing_xz || [0, 1]); orbit.facing = Math.atan2(fx[0], fx[1]);
+  if (grid) scene.remove(grid);
+  grid = new THREE.GridHelper(6, 24, 0x555555, 0x2a2a2a); grid.position.set(orbit.target.x, (P.mesh.floor_y_mm || 0) / 1000, orbit.target.z); scene.add(grid);
+  weightCache = {}; curRow = -1;
+  $('scrub').max = duration(); $('over').classList.add('hidden');
+  renderReps(); setView('front'); seek(0);
+}
+function showBuild(rebuild){
+  $('buildPanel').classList.remove('hidden'); $('over').classList.remove('hidden');
+  const state = P.mesh_state;
+  $('buildTag').className = 'tag ' + ({building: 'run', error: 'err'}[state] || '');
+  $('buildTag').textContent = {none: 'not built yet', building: 'building…', error: 'failed'}[state] || state;
+  $('over').innerHTML = state === 'building' ? '<div>Building the 3D mesh&hellip;</div>'
+    : `<div>${rebuild ? 'Make the mesh again:' : state === 'error' ? 'The mesh build failed (log below).' : 'This recording has no 3D mesh yet.'}</div>
+       <select id="buildSrc" style="max-width:420px">
+         <option value="motionbert|side">MotionBERT on the side camera's 2D keypoints (recommended for squats)</option>
+         <option value="motionbert|front">MotionBERT on the front camera's 2D keypoints</option>
+         <option value="fit|">SMPL fitted to the triangulated 3D points</option></select>
+       <button class="btn" id="buildBtn">Build 3D mesh</button>
+       <div class="note">MotionBERT: ~15 s on a CPU, same model as the single-view pipeline. From the front, squat depth is along the camera's line of sight, so the side camera shows it better.</div>`;
+  if ($('buildBtn')) $('buildBtn').onclick = async () => { const [method, camera] = $('buildSrc').value.split('|');
+    await api('/api/mesh/build', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({path: P.path, method, camera})}); P.mesh_state = 'building'; showBuild(); };
+  clearInterval(buildTimer);
+  if (state === 'building') buildTimer = setInterval(async () => {
+    const s = await api('/api/mesh/status?path=' + encodeURIComponent(P.path));
+    $('buildLog').textContent = s.log;
+    if (s.state !== 'building'){ clearInterval(buildTimer); loadRoot(); if (s.state === 'done') openPerson(P.path); else { P.mesh_state = s.state; showBuild(); } }
+  }, 2000);
+  api('/api/mesh/status?path=' + encodeURIComponent(P.path)).then(s => $('buildLog').textContent = s.log || '');
+}
+
+// ------------------------------------------------------------- templates
+async function loadTemplates(){
+  const d = await api('/api/templates');
+  tplRows = d.templates;
+  $('tplFolder').textContent = 'Folder: ' + d.folder;
+  $('tplList').innerHTML = tplRows.length ? tplRows.map(t => `<div class="tpl"><span>${esc(t.name)} <span class="note">${t.n === NV ? '' : '(' + t.n + ' values!)'}</span></span><button data-del="${esc(t.file)}" title="Delete">&times;</button></div>`).join('')
+    : '<div class="note">No templates yet.</div>';
+  document.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { if (!confirm('Delete template ' + b.dataset.del + '?')) return;
+    await fetch('/api/templates/' + encodeURIComponent(b.dataset.del), {method: 'DELETE'}); for (const k in tpl) if (tpl[k].file === b.dataset.del) delete tpl[k]; loadTemplates(); });
+  $('anyTpl').innerHTML = '<option value="">&ndash;</option>' + tplRows.filter(t => t.n === NV).map(t => `<option value="${esc(t.key)}">${esc(t.name)}</option>`).join('');
+  await Promise.all(tplRows.filter(t => t.n === NV && !tpl[t.key]).map(async t => {
+    const j = await (await fetch('/api/templates/' + encodeURIComponent(t.file))).json();
+    const s = Float32Array.from(j.saliency); let mx = 0; for (const x of s) mx = Math.max(mx, x);
+    if (mx > 0) for (let i = 0; i < s.length; i++) s[i] /= mx;     // 0..1
+    tpl[t.key] = {name: t.name, file: t.file, sal: s};
+  }));
+  if (P) renderErrChips();
+}
+$('tplUpload').onclick = () => $('tplFiles').click();
+$('tplFiles').onchange = async () => {
+  const fd = new FormData(); [...$('tplFiles').files].forEach(f => fd.append('files', f));
+  try{ const r = await api('/api/templates', {method: 'POST', body: fd}); if (r.errors.length) alert(r.errors.join('\n')); }catch(e){ alert(e.message); }
+  $('tplFiles').value = ''; await loadTemplates(); loadRoot();
+};
+function renderErrChips(){
+  const errs = (P && P.errors) || [];
+  const have = errs.filter(e => tpl[key(e)]);
+  if (active && active !== 'all' && !tpl[active]) active = null;
+  if (!active) active = have.length > 1 ? 'all' : (have[0] ? key(have[0]) : null);
+  $('errChips').innerHTML = (have.length > 1 ? `<span class="chip ${active === 'all' ? 'on' : ''}" data-k="all">All errors</span>` : '') +
+    errs.map(e => tpl[key(e)] ? `<span class="chip ${active === key(e) ? 'on' : ''}" data-k="${key(e)}">${esc(e)}</span>`
+                              : `<span class="chip missing" title="No template named like this yet - paint it in the fault painter and upload it">${esc(e)} <small>no template</small></span>`).join('') +
+    `<span class="chip ${active === null ? 'on' : ''}" data-k="">Off</span>`;
+  document.querySelectorAll('#errChips [data-k]').forEach(c => c.onclick = () => { active = c.dataset.k || null; $('anyTpl').value = ''; renderErrChips(); refresh(); });
+  if (!errs.length) $('errChips').insertAdjacentHTML('afterbegin', '<span class="note">No errors labelled for this recording.</span>');
+  refresh();
+}
+$('anyTpl').onchange = () => { active = $('anyTpl').value || null; renderErrChips(); };
+
+// ------------------------------------------------------------- saliency colouring
+function jet(t){ return [clamp(1.5 - Math.abs(4 * t - 3), 0, 1), clamp(1.5 - Math.abs(4 * t - 2), 0, 1), clamp(1.5 - Math.abs(4 * t - 1), 0, 1)]; }
+function activeMap(){
+  if (!active || !P) return null;
+  if (active !== 'all') return tpl[active] ? tpl[active].sal : null;
+  const keys = P.errors.map(key).filter(k => tpl[k]);
+  if (!keys.length) return null;
+  const m = new Float32Array(NV);
+  for (const k of keys){ const s = tpl[k].sal; for (let i = 0; i < NV; i++) if (s[i] > m[i]) m[i] = s[i]; }
+  return m;
+}
+let mapCache = {k: null, m: null};
+function curMap(){ if (mapCache.k !== active + '|' + tplRows.length) mapCache = {k: active + '|' + tplRows.length, m: activeMap()}; return mapCache.m; }
+function weights(){
+  // temporal weight per frame number: how strongly the overlay shows at that moment
+  const mode = $('tmode').value;
+  if (weightCache[mode]) return weightCache[mode];
+  const n = Math.max(P.depth.length, ...P.mesh.frames.map(f => f + 1)), w = new Float32Array(n), fps = P.fps;
+  if (mode === 'always' || !P.reps.length) w.fill(mode === 'always' ? 1 : 0);
+  if (P.reps.length && mode !== 'always'){
+    for (const r of P.reps){
+      const [a, b, e] = r.t.map(s => Math.round(s * fps));
+      const d = i => P.depth[i] ?? 0, lo = Math.min(d(a), d(e)), hi = d(b);
+      for (let i = Math.max(0, a); i <= Math.min(n - 1, e); i++) w[i] = mode === 'rep' ? 1 : clamp((d(i) - lo) / Math.max(1e-6, hi - lo), 0, 1);
+    }
+  } else if (mode === 'depth' && !P.reps.length && P.depth.length){   // no reps found: follow depth over the whole video
+    const mx = Math.max(...P.depth.map(x => x ?? 0)); for (let i = 0; i < n; i++) w[i] = clamp((P.depth[i] ?? 0) / Math.max(mx, 1e-6), 0, 1);
+  }
+  return weightCache[mode] = w;
+}
+function paint(row){
+  const pos = geom.attributes.position.array, col = geom.attributes.color.array, o = row * NV * 3;
+  for (let i = 0; i < NV * 3; i++) pos[i] = verts[o + i] * 0.001;
+  geom.attributes.position.needsUpdate = true; geom.computeVertexNormals();
+  const m = curMap(), w = m ? weights()[P.mesh.frames[row]] || 0 : 0, gain = +$('gain').value, thr = +$('thr').value;
+  const [b0, b1, b2] = BASE;
+  for (let v = 0; v < NV; v++){
+    let c0 = b0, c1 = b1, c2 = b2;
+    if (m){ const s = Math.min(1, m[v] * w * gain); if (s > thr){ const j = jet(s), a = Math.min(1, s * 1.6); c0 = b0 * (1 - a) + j[0] * a; c1 = b1 * (1 - a) + j[1] * a; c2 = b2 * (1 - a) + j[2] * a; } }
+    col[v * 3] = c0; col[v * 3 + 1] = c1; col[v * 3 + 2] = c2;
+  }
+  geom.attributes.color.needsUpdate = true;
+  const name = !m ? '' : active === 'all' ? 'All errors' : (tpl[active] || {}).name || '';
+  $('faultLbl').textContent = name ? `${name} · ${Math.round(w * 100)} %` : '';
+  $('faultLbl').classList.toggle('hidden', !name); $('legend').classList.toggle('hidden', !m);
+}
+['gain', 'thr'].forEach(k => { const upd = () => { $(k + 'V').textContent = (+$(k).value).toFixed(2); refresh(); }; $(k).oninput = upd; $(k + 'V').textContent = (+$(k).value).toFixed(2); });
+$('tmode').onchange = () => refresh();
+function refresh(){ if (verts && curRow >= 0){ paint(curRow); draw(); drawTimeline(); } }
+
+// ------------------------------------------------------------- time / playback
+const fps = () => (P && P.fps) || 30;
+const duration = () => P && P.mesh ? (P.mesh.frames[P.mesh.frames.length - 1] + 1) / fps() : 0;
+let playing = false, clock = {t0: 0, w0: 0}, raf = null;
+function master(){ return P && P.videos.includes('front') ? $('vF') : (P && P.videos.includes('side') ? $('vS') : null); }
+function now(){ const m = master(); return m ? m.currentTime : clock.t0 + (playing ? (performance.now() - clock.w0) / 1000 * +$('speed').value : 0); }
+function showTime(t){
+  const f = Math.round(t * fps());
+  let row = idxOf.get(f);
+  if (row === undefined){ row = f < P.mesh.frames[0] ? 0 : T - 1; }
+  if (row !== curRow){ curRow = row; paint(row); draw(); }
+  $('scrub').value = t; $('tlabel').textContent = `${t.toFixed(2)} / ${duration().toFixed(2)} s`;
+  drawTimeline(t);
+  document.querySelectorAll('#repChips .chip').forEach(c => { const r = P.reps[+c.dataset.i]; c.classList.toggle('on', t >= r.t[0] && t <= r.t[2]); });
+}
+function seek(t){
+  t = clamp(t, 0, duration());
+  ['vF', 'vS'].forEach(id => { const v = $(id); if (v.src) v.currentTime = t; });
+  clock = {t0: t, w0: performance.now()}; showTime(t);
+}
+function loop(){
+  if (!playing) return;
+  let t = now();
+  const m = master(), other = m === $('vF') ? $('vS') : null;
+  if (other && other.src && Math.abs(other.currentTime - t) > 0.08) other.currentTime = t;
+  if (t >= duration() - 0.02){ stop(); t = duration(); }
+  showTime(t); raf = requestAnimationFrame(loop);
+}
+function play(){
+  if (!verts) return;
+  if (now() >= duration() - 0.05) seek(0);
+  playing = true; $('play').innerHTML = '&#10074;&#10074;';
+  ['vF', 'vS'].forEach(id => { const v = $(id); if (v.src){ v.playbackRate = +$('speed').value; v.play().catch(() => {}); } });
+  clock = {t0: now(), w0: performance.now()}; loop();
+}
+function stop(){
+  playing = false; cancelAnimationFrame(raf); $('play').innerHTML = '&#9654;';
+  ['vF', 'vS'].forEach(id => $(id).pause());
+  if (recorder && recorder.state === 'recording') recorder.stop();
+}
+$('play').onclick = () => playing ? stop() : play();
+$('scrub').oninput = () => { if (playing) stop(); seek(+$('scrub').value); };
+$('speed').onchange = () => { ['vF', 'vS'].forEach(id => $(id).playbackRate = +$('speed').value); clock = {t0: now(), w0: performance.now()}; };
+document.addEventListener('keydown', e => { if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT'){ e.preventDefault(); $('play').click(); } });
+function renderReps(){
+  $('repChips').innerHTML = P.reps.map((r, i) => `<span class="chip" data-i="${i}">Rep ${r.id} <small>${r.t[1].toFixed(1)} s</small></span>`).join('') || '<span class="note">No reps detected.</span>';
+  document.querySelectorAll('#repChips .chip').forEach(c => c.onclick = () => { if (playing) stop(); seek(P.reps[+c.dataset.i].t[1]); });
+}
+function drawTimeline(t){
+  const c = $('timeline'), dpr = window.devicePixelRatio || 1, W = c.clientWidth, H = c.clientHeight;
+  if (!P || !P.mesh || !W) return;
+  if (c.width !== W * dpr){ c.width = W * dpr; c.height = H * dpr; }
+  const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  const D = duration(), x = s => s / D * W;
+  g.fillStyle = 'rgba(255,124,0,.10)'; P.reps.forEach(r => g.fillRect(x(r.t[0]), 0, x(r.t[2]) - x(r.t[0]), H));
+  const n = P.mesh.frames.length;
+  if (P.depth.length){ // squat depth (grey)
+    const mx = Math.max(...P.depth.map(v => v ?? 0)) || 1; g.strokeStyle = '#666'; g.lineWidth = 1; g.beginPath();
+    P.depth.forEach((v, i) => { const X = x(i / fps()), Y = H - 4 - (v ?? 0) / mx * (H - 8); i ? g.lineTo(X, Y) : g.moveTo(X, Y); }); g.stroke();
+  }
+  if (curMap()){ // overlay strength (orange)
+    const w = weights(); g.strokeStyle = '#FF7C00'; g.lineWidth = 2; g.beginPath();
+    for (let i = 0; i < n; i++){ const f = P.mesh.frames[i], X = x(f / fps()), Y = H - 4 - (w[f] || 0) * (H - 8); i ? g.lineTo(X, Y) : g.moveTo(X, Y); } g.stroke();
+  }
+  const tt = t ?? +$('scrub').value; g.fillStyle = '#fff'; g.fillRect(x(tt) - 1, 0, 2, H);
+}
+$('timeline').onclick = e => { if (!P || !P.mesh) return; const r = $('timeline').getBoundingClientRect(); if (playing) stop(); seek((e.clientX - r.left) / r.width * duration()); };
+
+// ------------------------------------------------------------- record the 3D view
+let recorder = null;
+$('rec').onclick = () => {
+  if (recorder && recorder.state === 'recording'){ stop(); return; }
+  if (!verts) return;
+  const chunks = [], stream = canvas.captureStream(30);
+  recorder = new MediaRecorder(stream, {mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm'});
+  recorder.ondataavailable = e => e.data.size && chunks.push(e.data);
+  recorder.onstop = () => {
+    $('rec').innerHTML = '&#9679; Record'; $('rec').classList.remove('on');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(chunks, {type: 'video/webm'}));
+    a.download = `${P.name}_${active === 'all' ? 'all_errors' : (tpl[active] || {name: 'mesh'}).name}.webm`.replace(/[^\w.\-]+/g, '_'); a.click();
+  };
+  recorder.start(); $('rec').innerHTML = '&#9632; Stop'; $('rec').classList.add('on'); play();
+};
+
+// ------------------------------------------------------------- start
+// ?root=<folder>&path=<recording>&t=<seconds> opens a recording directly (links, screenshots)
+const Q = new URLSearchParams(location.search);
+if (Q.get('root')) $('root').value = Q.get('root');
+if (Q.get('path')) store.set('meshPerson', Q.get('path'));
+loadTemplates().then(loadRoot).then(() => new Promise(r => setTimeout(r, 50))).then(async () => {
+  for (let i = 0; i < 100 && Q.get('t') && !verts; i++) await new Promise(r => setTimeout(r, 200));
+  if (Q.get('t') && verts) seek(+Q.get('t'));
+  if (Q.get('view') && verts) setView(Q.get('view'));
+  if (Q.get('error') && verts){ active = key(Q.get('error')) || null; renderErrChips(); }
+});
+placeCamera(); resize();
+</script>
+</body>
+</html>

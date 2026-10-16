@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Squat Analysis</title>
+<style>
+:root{
+  --bg:#0f1012; --panel:#17181b; --panel2:#1e2024; --raised:#24262b; --line:#2c2f35; --line2:#3a3e45;
+  --text:#ecebe8; --muted:#a2a29c; --faint:#6f706b;
+  --primary:#ecebe8; --on-primary:#141517;
+  --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#e05454;
+  --radius:10px; --mono:ui-monospace,"Cascadia Code",Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+button,input,select{font:inherit;color:inherit}
+a{color:inherit}
+.hidden{display:none!important}
+.muted{color:var(--muted)} .faint{color:var(--faint)} .small{font-size:12px}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- top bar */
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:20px;padding:0 20px;height:54px;background:rgba(15,16,18,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.brand{font-weight:700;font-size:16px;letter-spacing:.01em;white-space:nowrap}
+.brand b{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--primary);margin-right:8px;vertical-align:1px}
+nav{display:flex;gap:4px}
+nav a{padding:7px 12px;white-space:nowrap;border-radius:8px;text-decoration:none;color:var(--muted)}
+nav a:hover{color:var(--text);background:var(--panel2)}
+nav a.on{color:var(--text);background:var(--raised)}
+.top .sp{flex:1}
+.top .model{font-size:12px;color:var(--muted);white-space:nowrap}
+@media(max-width:640px){.top{gap:10px;padding:0 12px}.top .model{display:none}nav a{padding:6px 8px}}
+@media(max-width:480px){.brand span{display:none}#legend{display:none!important}}
+
+main{padding:20px}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font-size:22px;margin:0 0 4px} h2{font-size:16px;margin:0 0 12px} h3{font-size:14px;margin:0 0 8px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+
+/* ---------- forms */
+label.f{display:block;font-size:12px;color:var(--muted);margin:12px 0 5px}
+input[type=text],input[type=number],select{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--line2);background:var(--bg);outline:none}
+input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row>*{min-width:0}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;border:1px solid var(--line2);background:var(--raised);cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{border-color:var(--faint)}
+.btn.primary{background:var(--primary);color:var(--on-primary);border-color:var(--primary);font-weight:650}
+.btn.primary:hover{filter:brightness(.92)}
+.btn.danger:hover{border-color:var(--critical);color:var(--critical)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:4px 9px;font-size:12px}
+.icon{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:1px solid var(--line2);background:var(--raised);cursor:pointer;padding:0}
+.icon:hover{border-color:var(--faint)}
+.icon.on{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+.file{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.file .pick{flex:0 0 auto}
+.file .name{flex:1;min-width:140px;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file input[type=file]{display:none}
+.or{font-size:11px;color:var(--faint);margin:6px 0 4px}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:6px 12px;cursor:pointer;color:var(--muted)}
+.seg button.on{background:var(--raised);color:var(--text)}
+.msg{margin-top:10px;font-size:13px}
+.msg.err{color:var(--critical)}
+.bar{height:6px;border-radius:3px;background:var(--panel2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--primary);width:0}
+
+/* ---------- chips / status */
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;border:1px solid var(--line2);font-size:12px;white-space:nowrap}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+.state{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.state .dot{background:var(--faint)}
+.state.done .dot{background:var(--good)} .state.running .dot,.state.queued .dot{background:var(--warning)}
+.state.error .dot,.state.interrupted .dot{background:var(--critical)} .state.cancelled .dot{background:var(--faint)}
+
+/* ---------- lists */
+.list{display:flex;flex-direction:column;gap:8px}
+.item{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);cursor:pointer;text-decoration:none}
+.item:hover{border-color:var(--line2)}
+.item .main{flex:1;min-width:0}
+.item .title{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.score{font-size:20px;font-weight:700;min-width:58px;text-align:right}
+.empty{padding:28px 10px;text-align:center;color:var(--muted)}
+
+/* ---------- processing */
+.steps{list-style:none;margin:16px 0;padding:0;display:flex;flex-direction:column;gap:2px}
+.steps li{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:8px;color:var(--faint)}
+.steps li .ic{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--line2);display:inline-flex;align-items:center;justify-content:center;font-size:11px;flex:0 0 auto}
+.steps li.done{color:var(--muted)} .steps li.done .ic{background:var(--good);border-color:var(--good);color:#06130a}
+.steps li.cur{color:var(--text);background:var(--panel2)}
+.steps li.cur .ic{border-color:var(--warning);border-top-color:transparent;animation:spin 1s linear infinite}
+.steps li.fail{color:var(--critical)} .steps li.fail .ic{border-color:var(--critical)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.steps li .pg{margin-left:auto;font-size:12px;color:var(--muted)}
+.warnbox,.errbox{border-radius:9px;padding:10px 12px;margin-top:10px;font-size:13px;display:flex;gap:10px;align-items:flex-start}
+.warnbox{background:rgba(250,178,25,.08);border:1px solid rgba(250,178,25,.35)}
+.errbox{background:rgba(224,84,84,.08);border:1px solid rgba(224,84,84,.45)}
+.warnbox .ic,.errbox .ic{font-weight:800;flex:0 0 auto}
+.warnbox .ic{color:var(--warning)} .errbox .ic{color:var(--critical)}
+pre.log{background:#0a0a0b;border:1px solid var(--line);border-radius:8px;padding:10px;max-height:300px;overflow:auto;font:12px/1.45 var(--mono);color:#cfd3c8;white-space:pre-wrap;margin:8px 0 0}
+details summary{cursor:pointer;color:var(--muted);font-size:13px;margin-top:12px}
+
+/* ---------- results */
+#vSession.results main{padding:0}
+.rhead{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 20px;border-bottom:1px solid var(--line)}
+.rhead .t{min-width:0}
+.rhead h1{font-size:18px;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rhead .sp{flex:1}
+.stat{display:flex;flex-direction:column;align-items:flex-start;padding:0 14px;border-left:1px solid var(--line)}
+.stat b{font-size:18px;line-height:1.2} .stat span{font-size:11px;color:var(--muted)}
+.banner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 20px;font-size:13px;border-bottom:1px solid var(--line);background:var(--panel)}
+.banner.demo{background:rgba(250,178,25,.1);border-bottom-color:rgba(250,178,25,.35)}
+.banner .tag{font-weight:800;letter-spacing:.06em;font-size:11px;padding:2px 8px;border-radius:4px;background:var(--warning);color:#1a1300}
+.focus{padding:8px 20px;font-size:13px;border-bottom:1px solid var(--line);color:var(--muted)}
+.focus b{color:var(--text)}
+#resView:not(.hidden){display:flex;flex-direction:column;height:calc(100vh - 54px);min-height:720px}
+.rgrid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.55fr) minmax(320px,1fr);gap:14px;padding:14px 20px}
+@media(max-width:1000px){#resView:not(.hidden){height:auto;display:block}.rgrid{grid-template-columns:1fr}}
+#stage{position:relative;background:#121315;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;min-height:380px}
+@media(max-width:1000px){#stage{height:50vh;min-height:320px}}
+#stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+.ov{position:absolute;pointer-events:none}
+.ov>*{pointer-events:auto}
+.ov.tl{left:10px;top:10px;display:flex;gap:6px;flex-wrap:wrap}
+.ov.tr{right:10px;top:10px}
+.ov.bl{left:10px;bottom:10px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.ov.br{right:12px;bottom:10px;text-align:right;font-size:11px;color:var(--muted)}
+.vbtn{padding:5px 10px;border-radius:7px;border:1px solid var(--line2);background:rgba(23,24,27,.85);cursor:pointer;font-size:12px}
+.vbtn:hover{border-color:var(--faint)}
+.replabel{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border-radius:20px;background:rgba(15,16,18,.85);border:1px solid var(--line2);font-weight:650;font-size:13px}
+.ramp{display:block;width:150px;height:8px;border-radius:4px;margin:4px 0 2px auto;background:linear-gradient(90deg,#0000ff,#00ffff,#00ff00,#ffff00,#ff0000)}
+.stagemsg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);text-align:center;padding:24px;background:rgba(18,19,21,.9)}
+.pop{position:absolute;right:0;top:38px;width:290px;padding:12px;border-radius:9px;background:var(--raised);border:1px solid var(--line2);font-size:12.5px;color:var(--text);box-shadow:0 8px 30px rgba(0,0,0,.45)}
+.side{display:flex;flex-direction:column;gap:12px;min-height:0}
+.vids{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.vbox{position:relative;background:#000;border:1px solid var(--line);border-radius:9px;overflow:hidden;cursor:zoom-in}
+.vbox video{display:block;width:100%;aspect-ratio:16/9;object-fit:contain;background:#000}
+.vbox .vt{position:absolute;left:8px;top:6px;padding:1px 8px;border-radius:20px;background:rgba(0,0,0,.65);font-size:11px;font-weight:700;letter-spacing:.05em}
+.errp{flex:1;min-height:240px;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.errp .tabs{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.errp .tabs h2{margin:0;flex:1;font-size:14px}
+.errp .body{padding:12px;overflow:auto;flex:1}
+.card{border:1px solid var(--line);border-radius:9px;padding:12px;margin-bottom:10px;background:var(--panel2)}
+.card .hd{display:flex;align-items:center;gap:8px;font-weight:650;margin-bottom:6px}
+.card .reps{display:flex;gap:5px;flex-wrap:wrap;margin:6px 0 8px}
+.card .reps button{padding:2px 9px;border-radius:14px;border:1px solid var(--line2);background:var(--raised);cursor:pointer;font-size:12px}
+.card .reps button:hover,.card .reps button.on{border-color:var(--primary)}
+.card p{margin:4px 0;font-size:13px;color:var(--muted)}
+.card p b{color:var(--text);font-weight:600}
+.card ul{margin:4px 0 0;padding-left:18px;font-size:13px}
+.card li{margin:2px 0}
+.probs{display:grid;grid-template-columns:auto 1fr auto;gap:5px 10px;align-items:center;font-size:12.5px;margin:8px 0}
+.probs .pb{height:8px;border-radius:4px;background:var(--panel)}
+.probs .pb i{display:block;height:100%;border-radius:4px}
+
+/* ---------- timeline */
+.tline{padding:10px 20px 12px;background:var(--panel);border-top:1px solid var(--line)}
+@media(max-width:1000px){.tline{position:sticky;bottom:0;z-index:10}}
+.transport{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.transport .time{min-width:120px;color:var(--muted);font-variant-numeric:tabular-nums;font-size:13px}
+.transport .sp{flex:1}
+.transport select{width:auto;padding:5px 8px}
+#track{display:block;width:100%;height:76px;margin-top:8px;border-radius:7px;background:var(--panel2);cursor:pointer;touch-action:none}
+#scrub{width:100%;margin:6px 0 0;accent-color:var(--primary)}
+.keys{font-size:11px;color:var(--faint);margin-top:2px}
+@media(max-width:640px){.keys{display:none}}
+
+/* ---------- modal */
+.modal{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal .box{background:var(--panel);border:1px solid var(--line2);border-radius:12px;width:min(1100px,100%);max-height:100%;display:flex;flex-direction:column;overflow:hidden}
+.modal .mh{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.modal .mh h2{margin:0;flex:1}
+.modal .mb{padding:14px;overflow:auto}
+#bigVid{width:min(1400px,100%)}
+#bigVid .vbox{cursor:zoom-out}
+#bigVid .vbox video{max-height:80vh}
+#cmpStage{position:relative;height:min(58vh,560px);background:#121315;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+#cmpStage canvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab;touch-action:none}
+.cmplabels{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.cmplabels>div{display:flex;align-items:center;gap:8px;justify-content:center;font-size:13px}
+
+/* ---------- history */
+.charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}
+@media(max-width:900px){.charts{grid-template-columns:1fr}}
+.chart h3{margin:0 0 2px} .chart .sub{font-size:12px;color:var(--muted);margin-bottom:8px}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .axis line{stroke:var(--line)} .chart .axis text{fill:var(--faint);font-size:10px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.tip{position:fixed;z-index:60;pointer-events:none;background:var(--raised);border:1px solid var(--line2);border-radius:7px;padding:7px 9px;font-size:12px;box-shadow:0 6px 20px rgba(0,0,0,.4);max-width:260px}
+table.t{border-collapse:collapse;width:100%;font-size:13px}
+table.t th,table.t td{text-align:left;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.t th{color:var(--muted);font-weight:600;font-size:12px}
+table.t td.n,table.t th.n{text-align:right;font-variant-numeric:tabular-nums}
+table.t tbody tr{cursor:pointer} table.t tbody tr:hover td{background:var(--panel2)}
+.tscroll{overflow-x:auto}
+.cam{border:1px solid var(--line);border-radius:9px;padding:12px;background:var(--panel2)}
+.cam .hd{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cam .hd .name{font-weight:650;flex:1;min-width:120px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5px;margin-top:8px}
+.kv dt{color:var(--muted)} .kv dd{margin:0}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><b></b><span>Squat Analysis</span></div>
+  <nav>
+    <a href="#/" data-nav="home">New analysis</a>
+    <a href="#/history" data-nav="history">History</a>
+    <a href="#/cameras" data-nav="cameras">Cameras</a>
+  </nav>
+  <div class="sp"></div>
+  <div class="model" id="modelState"></div>
+</header>
+
+<!-- ======================================================= home -->
+<section id="vHome" class="view hidden"><main><div class="wrap">
+  <div class="grid2">
+    <div class="panel">
+      <h2>New analysis</h2>
+      <div class="muted small">Record the set as usual: hold the calibration board still where both cameras see it, clap once, then squat. Give the two videos below.</div>
+      <form id="newForm" autocomplete="off">
+        <label class="f" for="nName">Name (optional)</label>
+        <input type="text" id="nName" name="name" placeholder="e.g. Monday morning">
+        <label class="f" for="nCam">Camera profile</label>
+        <div class="row"><select id="nCam" name="camera" style="flex:1"></select><a class="btn sm" href="#/cameras">Manage</a></div>
+        <div id="nCamMsg" class="msg hidden"></div>
+        <label class="f">Front video</label>
+        <div class="file" data-field="front"><button type="button" class="btn sm pick">Choose file</button><span class="name">No file chosen</span><input type="file" accept="video/*" name="front"></div>
+        <div class="or">or the path of a video on this PC</div>
+        <input type="text" name="front_path" placeholder="C:\videos\front.mp4">
+        <label class="f">Side video</label>
+        <div class="file" data-field="side"><button type="button" class="btn sm pick">Choose file</button><span class="name">No file chosen</span><input type="file" accept="video/*" name="side"></div>
+        <div class="or">or the path of a video on this PC</div>
+        <input type="text" name="side_path" placeholder="C:\videos\side.mp4">
+        <div class="row" style="margin-top:16px"><button class="btn primary" id="nStart" type="submit">Start analysis</button><span class="muted small">Takes a few minutes on a laptop.</span></div>
+        <div class="bar hidden" id="nBar" style="margin-top:10px"><i></i></div>
+        <div id="nMsg" class="msg hidden"></div>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="row" style="margin-bottom:12px"><h2 style="margin:0;flex:1">Recent sessions</h2><a class="btn sm" href="#/history">All sessions</a></div>
+      <div class="list" id="recent"></div>
+    </div>
+  </div>
+</div></main></section>
+
+<!-- ======================================================= session -->
+<section id="vSession" class="view hidden">
+  <main id="procView" class="hidden"><div class="wrap" style="max-width:760px">
+    <div class="panel">
+      <div class="row"><h1 id="pName" style="flex:1;min-width:0"></h1><span id="pState"></span></div>
+      <div class="muted small" id="pSub"></div>
+      <ol class="steps" id="pSteps"></ol>
+      <div id="pWarn"></div>
+      <div id="pErr"></div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn" id="pCancel">Stop</button>
+        <button class="btn primary hidden" id="pRetry">Retry</button>
+        <button class="btn danger hidden" id="pDelete">Delete session</button>
+        <span class="sp" style="flex:1"></span><span class="muted small num" id="pTime"></span>
+      </div>
+      <details id="pLogBox"><summary>Show log</summary><pre class="log" id="pLog"></pre></details>
+    </div>
+  </div></main>
+
+  <div id="resView" class="hidden">
+    <div class="rhead">
+      <div class="t"><h1 id="rName"></h1><div class="muted small" id="rSub"></div></div>
+      <div class="stat"><b id="rReps" class="num">–</b><span>reps</span></div>
+      <div class="stat"><b id="rScore" class="num">–</b><span>correct</span></div>
+      <div class="stat"><b id="rTop">–</b><span>most frequent error</span></div>
+      <div class="sp"></div>
+      <button class="btn" id="rCompare">Compare reps</button>
+      <a class="btn" id="rZip">Download all</a>
+      <a class="btn" id="rCsv">reps.csv</a>
+      <button class="btn danger" id="rDelete" title="Delete this session">Delete</button>
+    </div>
+    <div class="banner hidden" id="rBanner"></div>
+    <div class="focus hidden" id="rFocus"></div>
+    <div id="rWarn" style="padding:0 20px"></div>
+    <div class="rgrid" id="rGrid">
+      <div id="stage">
+        <canvas id="gl" aria-label="3D body of the person, drag to rotate"></canvas>
+        <div class="ov tl">
+          <button class="vbtn" data-view="front">Front</button><button class="vbtn" data-view="side">Side</button><button class="vbtn" data-view="back">Back</button>
+          <button class="vbtn" data-view="top">Top</button><button class="vbtn" data-view="reset">Reset</button>
+        </div>
+        <div class="ov tr"><button class="icon" id="helpBtn" title="What does the colour mean?" aria-expanded="false">?</button>
+          <div class="pop hidden" id="helpPop"></div></div>
+        <div class="ov bl"><span class="replabel hidden" id="repLabel"></span><span class="small muted" id="tplNote"></span></div>
+        <div class="ov br hidden" id="legend">model attention on the error region<i class="ramp"></i>low<span style="display:inline-block;width:100px"></span>high</div>
+        <div class="stagemsg hidden" id="stageMsg"></div>
+      </div>
+      <div class="side">
+        <div class="vids">
+          <div class="vbox" data-cam="front"><span class="vt">FRONT</span><video id="vF" muted playsinline preload="auto"></video></div>
+          <div class="vbox" data-cam="side"><span class="vt">SIDE</span><video id="vS" muted playsinline preload="auto"></video></div>
+        </div>
+        <div class="errp">
+          <div class="tabs"><h2>Errors and fixes</h2>
+            <div class="seg" role="tablist"><button class="on" data-tab="all" role="tab">All reps</button><button data-tab="rep" role="tab">This rep</button></div></div>
+          <div class="body" id="errBody"></div>
+        </div>
+      </div>
+    </div>
+    <div class="tline">
+      <div class="transport">
+        <button class="icon" id="tPlay" title="Play / pause (space)" aria-label="Play">&#9654;</button>
+        <button class="icon" id="tPrevRep" title="Previous rep (P)" aria-label="Previous rep">&#9198;</button>
+        <button class="icon" id="tBack" title="One frame back (left arrow)" aria-label="One frame back">&#8249;</button>
+        <button class="icon" id="tFwd" title="One frame forward (right arrow)" aria-label="One frame forward">&#8250;</button>
+        <button class="icon" id="tNextRep" title="Next rep (N)" aria-label="Next rep">&#9197;</button>
+        <span class="time" id="tTime">0.00 / 0.00 s</span>
+        <span class="sp"></span>
+        <button class="btn sm" id="tLoop" title="Loop the current rep (L)">Loop rep</button>
+        <select id="tSpeed" title="Speed"><option value="0.25">0.25&times;</option><option value="0.5">0.5&times;</option><option value="1" selected>1&times;</option></select>
+      </div>
+      <canvas id="track" aria-label="Timeline: reps coloured by error and the model's attention; click to jump"></canvas>
+      <input type="range" id="scrub" min="0" max="1" step="0.001" value="0" aria-label="Time">
+      <div class="keys">Space play/pause · &larr; &rarr; one frame · N / P next / previous rep · L loop rep · click a rep to jump</div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================= history -->
+<section id="vHistory" class="view hidden"><main><div class="wrap">
+  <h1>History</h1>
+  <div class="muted">Every analysis, newest first. The charts follow your sessions over time.</div>
+  <div class="charts" id="charts"></div>
+  <div class="panel" style="margin-top:16px"><div class="tscroll"><table class="t" id="histTable"></table></div></div>
+</div></main></section>
+
+<!-- ======================================================= cameras -->
+<section id="vCameras" class="view hidden"><main><div class="wrap">
+  <h1>Cameras</h1>
+  <div class="muted">A camera profile holds the calibration of your two cameras. Make it once; every analysis then only needs the two squat videos. Record again if you change the camera, its resolution or zoom.</div>
+  <div class="grid2" style="margin-top:16px">
+    <div class="panel">
+      <h2>Your profiles</h2>
+      <div class="list" id="camList"></div>
+    </div>
+    <div class="panel">
+      <h2>New profile</h2>
+      <form id="camForm" autocomplete="off">
+        <label class="f" for="cName">Name</label>
+        <input type="text" id="cName" name="name" placeholder="e.g. Living room, two DJI cameras">
+        <label class="f">From</label>
+        <div class="seg" id="cSrc"><button type="button" class="on" data-src="videos">Calibration videos</button><button type="button" data-src="import">Import calibration.toml</button></div>
+        <div id="cVideos">
+          <div class="muted small" style="margin-top:10px">Intrinsic videos: one per camera, about 30&ndash;60 s, moving the board over the whole picture (corners and edges) at different tilts. Same resolution and frame rate as your squat videos.</div>
+          <label class="f">Intrinsic video &ndash; front camera</label>
+          <div class="file"><button type="button" class="btn sm pick">Choose file</button><span class="name">No file chosen</span><input type="file" accept="video/*" name="intr_front"></div>
+          <input type="text" name="intr_front_path" placeholder="or a path on this PC" style="margin-top:6px">
+          <label class="f">Intrinsic video &ndash; side camera</label>
+          <div class="file"><button type="button" class="btn sm pick">Choose file</button><span class="name">No file chosen</span><input type="file" accept="video/*" name="intr_side"></div>
+          <input type="text" name="intr_side_path" placeholder="or a path on this PC" style="margin-top:6px">
+          <details><summary>Optional fallback: extrinsic videos (board held still + one clap)</summary>
+            <div class="muted small" style="margin-top:6px">Used only when an analysis cannot find the board before its clap. Only valid while the cameras stay where they were.</div>
+            <label class="f">Extrinsic video &ndash; front camera</label>
+            <div class="file"><button type="button" class="btn sm pick">Choose file</button><span class="name">No file chosen</span><input type="file" accept="video/*" name="ext_front"></div>
+            <input type="text" name="ext_front_path" placeholder="or a path on this PC" style="margin-top:6px">
+            <label class="f">Extrinsic video &ndash; side camera</label>
+            <div class="file"><button type="button" class="btn sm pick">Choose file</button><span class="name">No file chosen</span><input type="file" accept="video/*" name="ext_side"></div>
+            <input type="text" name="ext_side_path" placeholder="or a path on this PC" style="margin-top:6px">
+          </details>
+        </div>
+        <div id="cImport" class="hidden">
+          <label class="f">Calibration (.toml, Pose2Sim format; only its intrinsics are used)</label>
+          <div class="file"><button type="button" class="btn sm pick">Choose file</button><span class="name">No file chosen</span><input type="file" accept=".toml" name="calib"></div>
+          <label class="f">Optional fallback: a complete calibration (.toml with extrinsics)</label>
+          <div class="file"><button type="button" class="btn sm pick">Choose file</button><span class="name">No file chosen</span><input type="file" accept=".toml" name="fallback"></div>
+        </div>
+        <h3 style="margin-top:18px">Calibration board</h3>
+        <div class="grid2" style="gap:0 12px">
+          <div><label class="f">Inner corners (intrinsic)</label><input type="text" name="intr_corners" value="6,7"></div>
+          <div><label class="f">Square size, mm (intrinsic)</label><input type="number" name="intr_square" value="41" min="1" step="0.1"></div>
+          <div><label class="f">Inner corners (in the squat videos)</label><input type="text" name="ext_corners" value="6,7"></div>
+          <div><label class="f">Square size, mm (in the squat videos)</label><input type="number" name="ext_square" value="41" min="1" step="0.1"></div>
+        </div>
+        <label class="f">Board before the clap</label>
+        <select name="board_position"><option value="vertical">Held upright (recommended)</option><option value="horizontal">Lying flat on the floor</option></select>
+        <div class="row" style="margin-top:16px"><button class="btn primary" type="submit" id="cStart">Create profile</button></div>
+        <div class="bar hidden" id="cBar" style="margin-top:10px"><i></i></div>
+        <div id="cMsg" class="msg hidden"></div>
+      </form>
+    </div>
+  </div>
+</div></main></section>
+
+<!-- ======================================================= modals -->
+<div class="modal hidden" id="vidModal"><div id="bigVid"></div></div>
+<div class="modal hidden" id="cmpModal" role="dialog" aria-label="Compare two reps"><div class="box">
+  <div class="mh"><h2>Compare two reps</h2>
+    <label class="small muted">Left</label><select id="cmpA" style="width:auto"></select>
+    <label class="small muted">Right</label><select id="cmpB" style="width:auto"></select>
+    <button class="icon" id="cmpClose" aria-label="Close">&times;</button></div>
+  <div class="mb">
+    <div id="cmpStage"><canvas id="cmpGl"></canvas>
+      <div class="ov tl"><button class="vbtn" data-cview="front">Front</button><button class="vbtn" data-cview="side">Side</button><button class="vbtn" data-cview="back">Back</button><button class="vbtn" data-cview="top">Top</button></div>
+      <div class="stagemsg hidden" id="cmpMsg"></div></div>
+    <div class="cmplabels"><div id="cmpLA"></div><div id="cmpLB"></div></div>
+    <div class="transport" style="margin-top:10px">
+      <button class="icon" id="cmpPlay" aria-label="Play">&#9654;</button>
+      <input type="range" id="cmpPhase" min="0" max="1" step="0.001" value="0" style="flex:1;accent-color:var(--primary)" aria-label="Phase of the rep">
+      <span class="time small" id="cmpPh" style="min-width:150px;text-align:right">start</span>
+    </div>
+    <div class="muted small" style="margin-top:6px">Both reps play in step: start, bottom of the squat (half-way) and end are lined up, whatever their speed.</div>
+  </div></div></div>
+<div class="tip hidden" id="tip"></div>
+
+<script src="/vendor/three.min.js"></script>
+<script src="/static/product.js"></script>
+</body>
+</html>
