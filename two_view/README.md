@@ -200,6 +200,12 @@ The saliency is a **painted prior** (where on the body each fault shows), timed 
 explanation. A trained classifier's per-frame saliency (Grad-CAM scaffolding in `keypoint_pipeline.py`) can be
 fed into the same overlay later.
 
+## Final product
+
+The end-user web app (front + side video &rarr; errors per rep, 3D body with saliency, synced videos) lives in
+`final_product/` (see `final_product/README.md`); it runs this folder's `run_pose2sim.py` and `p2s_mesh.py`.
+The model hand-off (architecture, build instructions, sample data) is in `ai_lead_handoff/`.
+
 ## Run from the command line
 
 ```

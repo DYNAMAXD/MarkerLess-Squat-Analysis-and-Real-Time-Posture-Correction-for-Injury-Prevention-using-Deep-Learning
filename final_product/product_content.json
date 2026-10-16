@@ -1,0 +1,111 @@
+{
+  "_note": "Texts and colours of the final product (product_app.py). Edit freely; the page reloads them on every visit. Colours: a colour-blind-checked set for the dark page background - every rep block also carries the error's short name. \"view\" = default camera for that error: front, side, back, rear (three-quarter from behind) or top.",
+  "classes": [
+    "correct",
+    "insufficient_depth",
+    "forward_lean",
+    "knee_valgus",
+    "knee_varus",
+    "heel_lift",
+    "abnormal_tempo"
+  ],
+  "errors": {
+    "correct": {
+      "name": "Correct",
+      "short": "OK",
+      "color": "#199e70",
+      "view": "side",
+      "what": "Good rep: full depth, stable trunk, knees tracking over the toes, heels down, controlled tempo.",
+      "why": "This is the pattern to repeat.",
+      "fix": [
+        "Keep doing exactly this.",
+        "Use these reps as your reference when you compare reps."
+      ],
+      "focus": "Keep this technique on every rep."
+    },
+    "insufficient_depth": {
+      "name": "Insufficient depth",
+      "short": "Depth",
+      "color": "#3987e5",
+      "view": "rear",
+      "what": "The hips do not reach knee height at the bottom of the squat.",
+      "why": "A shallow squat trains only part of the range and puts more of the load on the knees instead of the hips.",
+      "fix": [
+        "Sit back and down; aim for thighs at least parallel to the floor.",
+        "Widen your stance slightly and turn the toes out a little.",
+        "Work on ankle mobility; practise to a box to learn the depth."
+      ],
+      "focus": "Reach thighs-parallel on every rep."
+    },
+    "forward_lean": {
+      "name": "Forward lean",
+      "short": "Lean",
+      "color": "#d95926",
+      "view": "rear",
+      "what": "The trunk tips too far forward during the squat.",
+      "why": "Excess lean shifts the load to the lower back and makes it harder to keep the spine neutral.",
+      "fix": [
+        "Chest up and brace the core before you descend.",
+        "Keep the weight over mid-foot; let the knees travel forward.",
+        "Strengthen the upper back (rows, face pulls)."
+      ],
+      "focus": "Keep the chest up and the trunk more upright."
+    },
+    "knee_valgus": {
+      "name": "Knee valgus",
+      "short": "Valgus",
+      "color": "#9085e9",
+      "view": "front",
+      "what": "The knees cave inward, towards each other.",
+      "why": "Inward collapse strains the inside of the knee and the ligaments (ACL, MCL).",
+      "fix": [
+        "Push the knees out over the toes; \"spread the floor\" with your feet.",
+        "Strengthen the hip abductors (band walks, clamshells).",
+        "Keep the weight over the whole foot."
+      ],
+      "focus": "Push the knees out over the toes."
+    },
+    "knee_varus": {
+      "name": "Knee varus",
+      "short": "Varus",
+      "color": "#c98500",
+      "view": "front",
+      "what": "The knees bow outward past the toes.",
+      "why": "Outward bowing loads the outside of the knee and the ankle unevenly.",
+      "fix": [
+        "Keep the knees in line with your second toe; do not force them out.",
+        "Check your stance width and toe angle."
+      ],
+      "focus": "Track the knees in line with the second toe."
+    },
+    "heel_lift": {
+      "name": "Heel lift",
+      "short": "Heels",
+      "color": "#d55181",
+      "view": "rear",
+      "what": "The heels leave the floor during the squat.",
+      "why": "Lifting the heels moves the weight to the toes and the front of the knees and makes you unstable.",
+      "fix": [
+        "Keep the weight on the heels and mid-foot.",
+        "Improve ankle dorsiflexion (calf stretching).",
+        "Temporarily use a small heel raise; try a slightly wider stance."
+      ],
+      "focus": "Keep the heels on the floor."
+    },
+    "abnormal_tempo": {
+      "name": "Abnormal tempo",
+      "short": "Tempo",
+      "color": "#008300",
+      "view": "side",
+      "what": "The rep is too fast, too slow or uneven (for example dropping into the bottom).",
+      "why": "Uncontrolled speed reduces control at the bottom of the squat, where the joints are loaded most.",
+      "fix": [
+        "Descend in about 2-3 s, pause briefly, rise smoothly.",
+        "Count the tempo out loud."
+      ],
+      "focus": "Control the tempo: about 2-3 s down, smooth up."
+    }
+  },
+  "uncertain_below": 0.5,
+  "saliency_help": "The colour shows where on the body this error shows (a painted map per error) and when the model paid most attention during the rep (brighter = more attention). It explains what the model looked at; it is not a medical diagnosis."
+}

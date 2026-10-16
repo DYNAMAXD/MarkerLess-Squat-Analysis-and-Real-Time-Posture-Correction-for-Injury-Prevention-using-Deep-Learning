@@ -1,28 +1,46 @@
-*.gif
-AlphaPose/examples/demo/*.jpg
-.Proj1Venv
-Proj1Venv
-outputs/*
-./outputs/*
-test_videos
-./test_videos
-*.mp4
-
 # Python
 __pycache__/
 *.py[cod]
 *.pyo
+.ipynb_checkpoints/
 
 # Virtual environments
 venv/
 .venv/
+.Proj1Venv
+Proj1Venv
 
-# Generated videos
+# Run outputs, uploads and test media
+outputs/
+test_videos/
 *.mp4
+*.MP4
+*.mov
+*.MOV
+*.gif
+AlphaPose/examples/demo/*.jpg
+
+# Trained model export for the final product (large; copied in locally)
+final_product/squat_model_export/
+
+# Archives and scratch logs (the folders they come from are tracked)
+*.zip
+run1.txt
 
 # Gradio local files
 .gradio/
 
+# Editor / OS clutter
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local notes
 thingsDone.txt
-# Claude Code local notes
 CLAUDE.md
+.claude/
+
+# Model hand-off for the AI lead (shared separately)
+ai_lead_handoff/
