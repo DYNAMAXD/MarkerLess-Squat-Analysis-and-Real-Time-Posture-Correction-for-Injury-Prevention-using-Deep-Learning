@@ -1,0 +1,107 @@
+{
+ "experiment": "decision_tree",
+ "model": "decision_tree",
+ "classes": [
+  "correct",
+  "insufficient_depth",
+  "forward_lean",
+  "knee_valgus",
+  "knee_varus",
+  "heel_lift"
+ ],
+ "n_params": null,
+ "macro_f1_mean": 0.3749621453545702,
+ "macro_f1_std": 0.05995511845671054,
+ "accuracy_mean": 0.40045520628167497,
+ "accuracy_std": 0.06321907532117912,
+ "rec_macro_f1_mean": 0.40426406926406927,
+ "rec_macro_f1_std": 0.05087127271951072,
+ "rec_accuracy_mean": 0.43735294117647056,
+ "per_class_f1_pooled": [
+  0.33226837060702874,
+  0.4537313432835821,
+  0.3956043956043956,
+  0.3232876712328767,
+  0.3046875,
+  0.5925925925925926
+ ],
+ "confusion_pooled": [
+  [
+   52,
+   6,
+   17,
+   42,
+   16,
+   1
+  ],
+  [
+   9,
+   76,
+   2,
+   31,
+   14,
+   1
+  ],
+  [
+   37,
+   31,
+   54,
+   37,
+   10,
+   1
+  ],
+  [
+   22,
+   30,
+   14,
+   59,
+   1,
+   18
+  ],
+  [
+   40,
+   50,
+   13,
+   3,
+   39,
+   18
+  ],
+  [
+   19,
+   9,
+   3,
+   49,
+   13,
+   96
+  ]
+ ],
+ "seconds": 0.5,
+ "data_settings": {
+  "T": 64,
+  "min_rep_s": 1.0,
+  "max_rep_s": 12.0,
+  "classes": [
+   "correct",
+   "insufficient_depth",
+   "forward_lean",
+   "knee_valgus",
+   "knee_varus",
+   "heel_lift"
+  ],
+  "max_missing_core": 0.25,
+  "max_trunk_missing": 0.5,
+  "inputs": "both",
+  "velocity": true,
+  "tempo": true,
+  "view": "both"
+ },
+ "model_settings": {
+  "d_model": 64,
+  "n_blocks": 4,
+  "n_heads": 4,
+  "dropout": 0.1,
+  "spatial_attn": true,
+  "temporal_attn": true,
+  "pooling": "attn"
+ }
+}

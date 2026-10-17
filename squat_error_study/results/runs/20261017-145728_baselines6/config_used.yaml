@@ -1,0 +1,49 @@
+cv:
+  n_splits: 5
+  seeds:
+  - 0
+  val_persons: 2
+data:
+  T: 64
+  classes:
+  - correct
+  - insufficient_depth
+  - forward_lean
+  - knee_valgus
+  - knee_varus
+  - heel_lift
+  inputs: both
+  max_missing_core: 0.25
+  max_rep_s: 12.0
+  max_trunk_missing: 0.5
+  min_rep_s: 1.0
+  tempo: true
+  velocity: true
+  view: both
+model:
+  d_model: 64
+  dropout: 0.1
+  n_blocks: 4
+  n_heads: 4
+  pooling: attn
+  spatial_attn: true
+  temporal_attn: true
+paths:
+  manifest: data/manifest.csv
+  processed: data/processed
+  recordings: data/recordings
+  runs: results/runs
+run_models:
+- decision_tree
+- logreg
+- random_forest
+- xgboost
+train:
+  batch_size: 64
+  epochs: 60
+  label_smoothing: 0.05
+  lr: 0.001
+  noise_std: 0.01
+  num_workers: 0
+  patience: 15
+  weight_decay: 0.01

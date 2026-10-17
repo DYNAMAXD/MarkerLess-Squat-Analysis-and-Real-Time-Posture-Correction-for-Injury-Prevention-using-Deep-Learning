@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Squat Study Session Report</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #1d232b; --muted: #5d6875; --line: #dfe3e8;
+    --blue: #2f6db5; --blue-soft: #dce9f7; --orange: #d9822b; --orange-soft: #fbe9d4;
+    --green: #2e8b57; --green-soft: #daf0e3; --red: #c0453b; --red-soft: #f8dcd9; --amber-soft: #fbf0cf;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14181d; --card: #1c2229; --ink: #e8ecf0; --muted: #9aa6b2; --line: #2d3640;
+      --blue: #6aa5ea; --blue-soft: #1f3550; --orange: #eba155; --orange-soft: #4a3418;
+      --green: #5cc58c; --green-soft: #1b3a2a; --red: #e8776d; --red-soft: #4a2420; --amber-soft: #43391a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14181d; --card: #1c2229; --ink: #e8ecf0; --muted: #9aa6b2; --line: #2d3640;
+    --blue: #6aa5ea; --blue-soft: #1f3550; --orange: #eba155; --orange-soft: #4a3418;
+    --green: #5cc58c; --green-soft: #1b3a2a; --red: #e8776d; --red-soft: #4a2420; --amber-soft: #43391a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.55;
+         font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 1.9rem; margin: 0 0 4px; }
+  h2 { font-size: 1.35rem; margin: 40px 0 12px; padding-top: 8px; border-top: 2px solid var(--line); }
+  h3 { font-size: 1.05rem; margin: 20px 0 6px; }
+  p { margin: 8px 0; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 8px; }
+  nav a { padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink);
+          text-decoration: none; font-size: .9rem; background: var(--card); }
+  nav a:hover { border-color: var(--blue); }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .stat b { display: block; font-size: 1.7rem; line-height: 1.1; }
+  .stat span { color: var(--muted); font-size: .88rem; }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line);
+          border-radius: 12px; overflow: hidden; font-size: .93rem; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--bg); font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  tr:last-child td { border-bottom: 0; }
+  .tablewrap { overflow-x: auto; }
+  .tag { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: .78rem; font-weight: 600; white-space: nowrap; }
+  .t-ok { background: var(--green-soft); color: var(--green); }
+  .t-warn { background: var(--amber-soft); color: var(--orange); }
+  .t-bad { background: var(--red-soft); color: var(--red); }
+  .t-info { background: var(--blue-soft); color: var(--blue); }
+  .timeline { list-style: none; margin: 0; padding: 0 0 0 18px; border-left: 3px solid var(--line); }
+  .timeline li { position: relative; margin: 0 0 14px; padding-left: 14px; }
+  .timeline li::before { content: ""; position: absolute; left: -26px; top: 6px; width: 12px; height: 12px;
+                         border-radius: 50%; background: var(--blue); border: 2px solid var(--bg); }
+  .timeline li.bug::before { background: var(--red); }
+  .timeline small { color: var(--muted); }
+  .bars .row { display: grid; grid-template-columns: 150px 1fr 70px; gap: 10px; align-items: center; margin: 6px 0; font-size: .9rem; }
+  .bars .track { background: var(--bg); border-radius: 6px; height: 18px; overflow: hidden; border: 1px solid var(--line); }
+  .bars .fill { height: 100%; background: var(--blue); }
+  .bars .fill.o { background: var(--orange); }
+  .bars .fill.g { background: var(--green); }
+  .bars .num { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+  .cv { display: grid; grid-template-columns: 70px repeat(5, 1fr); gap: 4px; font-size: .8rem; text-align: center; }
+  .cv div { padding: 8px 2px; border-radius: 6px; }
+  .cv .lab { text-align: left; color: var(--muted); padding-left: 0; }
+  .cv .tr { background: var(--blue-soft); color: var(--blue); }
+  .cv .te { background: var(--orange); color: #fff; font-weight: 700; }
+  .callout { border-left: 4px solid var(--blue); background: var(--blue-soft); padding: 10px 14px; border-radius: 0 10px 10px 0; margin: 14px 0; }
+  .callout.warn { border-color: var(--orange); background: var(--amber-soft); }
+  .callout.bad { border-color: var(--red); background: var(--red-soft); }
+  code, pre { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .86rem; }
+  pre { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-x: auto; margin: 8px 0; }
+  code { background: var(--bg); padding: 1px 5px; border-radius: 4px; border: 1px solid var(--line); }
+  pre code { background: none; border: 0; padding: 0; }
+  .check { list-style: none; padding: 0; margin: 0; }
+  .check li { padding: 10px 12px 10px 38px; position: relative; background: var(--card); border: 1px solid var(--line);
+              border-radius: 10px; margin: 8px 0; }
+  .check li::before { content: ""; position: absolute; left: 12px; top: 13px; width: 16px; height: 16px;
+                      border: 2px solid var(--muted); border-radius: 4px; }
+  .check .when { float: right; color: var(--muted); font-size: .82rem; margin-left: 10px; }
+  @media (max-width: 560px) { .bars .row { grid-template-columns: 110px 1fr 56px; } h1 { font-size: 1.5rem; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Squat Study: Session Report</h1>
+<p class="sub">Project <code>squat_error_study/</code> &middot; written 2026-10-17 &middot; what was built, what broke, what to do next</p>
+<nav>
+  <a href="#state">Where things stand</a><a href="#done">What was done</a><a href="#errors">Errors &amp; fixes</a>
+  <a href="#neck">Neck-missing problem</a><a href="#cv">Why 5-fold CV</a><a href="#timing">Run times</a>
+  <a href="#morning">Morning plan</a><a href="#memory">Restarting</a>
+</nav>
+
+<h2 id="state">1. Where things stand</h2>
+<div class="grid">
+  <div class="card stat"><b>112</b><span>recordings usable (of 126)</span></div>
+  <div class="card stat"><b>18</b><span>persons (A&ndash;S, without E)</span></div>
+  <div class="card stat"><b>1,188</b><span>reps in the compact file</span></div>
+  <div class="card stat"><b>873</b><span>reps after quality filters, 6 classes</span></div>
+  <div class="card stat"><b>9</b><span>models, all pass a crash test</span></div>
+  <div class="card stat"><b>1.1 GB</b><span>venv at <code>C:\squat_venv</code></span></div>
+</div>
+<div class="callout warn"><b>Not done yet:</b> no real training has been run, so there are no accuracy results. The 2-epoch crash-test numbers are meaningless. Angle validation against Kinovea and the final-model plug-in are also still open.</div>
+
+<h2 id="done">2. What was done, in order</h2>
+<ul class="timeline">
+  <li><b>Read the project.</b> Mapped the three top-level folders, the Pose2Sim pipeline, the product and the teammate hand-off spec.</li>
+  <li><b>Literature check (shallow).</b> Squat and exercise-form papers mostly use LSTM/GRU on 2D keypoints; graph and transformer models are common in rehab assessment. No squat paper found with calibrated two-camera 3D plus a spatio-temporal transformer. <small>Verify before claiming novelty.</small></li>
+  <li><b>Read KEY_INFO.xlsx</b> without installing anything (unzipped the XML). Persons A&ndash;S, six rep-error recordings flagged.</li>
+  <li><b>Venv</b> created at <code>C:\squat_venv</code>, with PyTorch, scikit-learn, XGBoost, pandas, matplotlib.</li>
+  <li><b>Data copied</b> (112 recordings, 188 MB, 6 files each) and <code>data/manifest.csv</code> written with an exclusion reason per row.</li>
+  <li><b>Code written:</b> feature builder, compact dataset, 9 models, person-wise cross-validation, 14 ablation variants, report plots, 2 notebooks, setup scripts, README.</li>
+  <li class="bug"><b>Found and fixed data problems</b> while testing (section 3). Rebuilt the dataset several times.</li>
+  <li><b>Crash test:</b> every model ran 2 epochs on 3 folds without errors.</li>
+  <li><b>Memory note saved</b> so a new session can continue.</li>
+</ul>
+
+<h2 id="errors">3. Errors faced and how they were solved</h2>
+<div class="tablewrap"><table>
+<tr><th>Problem</th><th>Cause</th><th>Fix</th><th>Impact</th></tr>
+<tr><td>Venv install failed inside the repo</td><td>Windows 260-character path limit; the repo folder name is very long</td><td>Venv moved to the short path <code>C:\squat_venv</code></td><td><span class="tag t-ok">solved</span></td></tr>
+<tr><td>No visible install progress</td><td>Hidden background process; log file not readable</td><td>Restarted with live streaming</td><td><span class="tag t-ok">solved</span></td></tr>
+<tr><td>Joints at exactly (0, 0, 0)</td><td>Pose2Sim writes joints it could not triangulate as zeros, not NaN</td><td>Treated as missing, then interpolated</td><td><span class="tag t-ok">solved</span> no lower-body joint missing in any rep</td></tr>
+<tr><td>16 recordings looked left/right swapped</td><td>A zero-filled Neck flipped my &ldquo;up&rdquo; axis</td><td>Forward from foot direction, up from ankle&rarr;hip. No real swaps exist</td><td><span class="tag t-ok">solved</span></td></tr>
+<tr><td>p35 had no Hip joint</td><td>Hip missing for the whole recording</td><td>Rebuilt as the midpoint of the two hip joints</td><td><span class="tag t-ok">solved</span></td></tr>
+<tr><td>Neck / Head / shoulders missing for whole recordings</td><td>Upper body not triangulated (probably out of frame); the pipeline trunk angles are garbage there</td><td>Config filter drops those reps by default (see section 4)</td><td><span class="tag t-warn">needs your decision</span></td></tr>
+<tr><td>p94&ndash;p99 (persons N, O) missing from <code>Temp_Dataset</code></td><td>Folders not present although KEY_INFO lists them and the batch log says &ldquo;done&rdquo; (p95: error). You have them in another folder</td><td>Copy them back in the morning, then rebuild (README, Step 0)</td><td><span class="tag t-warn">morning, 15 min</span></td></tr>
+<tr><td>Inline patch broke on shell quoting</td><td>Apostrophes inside a PowerShell/bash command</td><td>Wrote patch scripts as files instead</td><td><span class="tag t-ok">solved</span></td></tr>
+<tr><td>Cleanup command blocked</td><td>Safety guard on Remove-Item</td><td>Left the 10 <code>*_smoketest</code> folders for you to delete (git-ignored)</td><td><span class="tag t-info">manual</span></td></tr>
+</table></div>
+
+<h2 id="neck">4. The Neck-missing problem: what to do</h2>
+<p>The Neck is missing for the whole recording in <b>13 recordings (147 reps, about 12%)</b>. In those, the pipeline&rsquo;s trunk angle is wrong: maximum about 1&deg; instead of about 28&deg;. A model trained on it would see &ldquo;perfectly upright&rdquo; trunks, which would hurt <code>forward_lean</code> learning.</p>
+
+<h3>Recordings with the Neck missing, per person</h3>
+<div class="bars">
+  <div class="row"><span>Person B (7 total)</span><div class="track"><div class="fill o" style="width:86%"></div></div><span class="num">6</span></div>
+  <div class="row"><span>Person D</span><div class="track"><div class="fill o" style="width:43%"></div></div><span class="num">3</span></div>
+  <div class="row"><span>Person F</span><div class="track"><div class="fill o" style="width:43%"></div></div><span class="num">3</span></div>
+  <div class="row"><span>Person I</span><div class="track"><div class="fill o" style="width:14%"></div></div><span class="num">1</span></div>
+</div>
+
+<h3>Recordings per class: all included vs after dropping Neck-missing reps</h3>
+<div class="bars">
+  <div class="row"><span>correct</span><div class="track"><div class="fill" style="width:75%"></div></div><span class="num">15 &rarr; 12</span></div>
+  <div class="row"><span>insufficient_depth</span><div class="track"><div class="fill" style="width:75%"></div></div><span class="num">15 &rarr; 12</span></div>
+  <div class="row"><span>forward_lean</span><div class="track"><div class="fill" style="width:94%"></div></div><span class="num">17 &rarr; 16</span></div>
+  <div class="row"><span>knee_valgus</span><div class="track"><div class="fill" style="width:76%"></div></div><span class="num">16 &rarr; 13</span></div>
+  <div class="row"><span>knee_varus</span><div class="track"><div class="fill" style="width:88%"></div></div><span class="num">17 &rarr; 15</span></div>
+  <div class="row"><span>heel_lift</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="num">17 &rarr; 17</span></div>
+</div>
+<div class="callout">Good news: only <b>one</b> forward_lean recording is lost, and every class keeps at least 12 recordings. The damage is moderate, not fatal.</div>
+
+<h3>Options</h3>
+<div class="tablewrap"><table>
+<tr><th>Option</th><th>What it means</th><th>Verdict</th></tr>
+<tr><td><b>A. Drop those reps</b> (current default)</td><td>Train and test only on reps with a usable trunk. 873 reps remain.</td><td><span class="tag t-ok">recommended for the main result</span></td></tr>
+<tr><td><b>B. Keep everything</b></td><td>Set <code>data.max_trunk_missing: null</code>. Trunk angles are garbage in 12% of reps.</td><td><span class="tag t-warn">run as a robustness check</span></td></tr>
+<tr><td><b>C. Keep, but mask trunk features</b></td><td>Zero the upper-body inputs for those reps so the model learns from the lower body only. Needs a small code addition.</td><td><span class="tag t-info">optional</span></td></tr>
+<tr><td><b>D. Re-run Pose2Sim</b> on those 13 recordings</td><td>Only helps if the upper body was visible in both videos. Check one video first.</td><td><span class="tag t-info">only if time allows</span></td></tr>
+</table></div>
+<p><b>Suggested plan:</b> report A as the main result, B as a sensitivity analysis, and state in the paper&rsquo;s limitations that the Neck was not triangulated in 13 of 112 recordings. Reviewers accept this when it is stated openly. Person B keeps only 1 of its 7 recordings, so its test fold is small.</p>
+
+<h2 id="cv">5. Why 5-fold cross-validation, split by person</h2>
+<p>It is the way the models are <b>evaluated</b>, not a model. The 18 persons are split into 5 groups. Each round trains on 4 groups and tests on the 5th. After 5 rounds, every person has been tested exactly once on a model that never saw them.</p>
+<div class="cv" aria-label="Five folds, one test group each">
+  <div class="lab"></div><div>Group 1</div><div>Group 2</div><div>Group 3</div><div>Group 4</div><div>Group 5</div>
+  <div class="lab">Round 1</div><div class="te">test</div><div class="tr">train</div><div class="tr">train</div><div class="tr">train</div><div class="tr">train</div>
+  <div class="lab">Round 2</div><div class="tr">train</div><div class="te">test</div><div class="tr">train</div><div class="tr">train</div><div class="tr">train</div>
+  <div class="lab">Round 3</div><div class="tr">train</div><div class="tr">train</div><div class="te">test</div><div class="tr">train</div><div class="tr">train</div>
+  <div class="lab">Round 4</div><div class="tr">train</div><div class="tr">train</div><div class="tr">train</div><div class="te">test</div><div class="tr">train</div>
+  <div class="lab">Round 5</div><div class="tr">train</div><div class="tr">train</div><div class="tr">train</div><div class="tr">train</div><div class="te">test</div>
+</div>
+<h3>Why this and not one train/test split</h3>
+<ul>
+  <li><b>Only 18 persons.</b> A single split puts 3&ndash;4 persons in the test set; the score would depend on who happened to land there. Five rounds give a mean and a spread.</li>
+  <li><b>Uses all the data</b> for both training and testing, which matters when data is small.</li>
+  <li><b>Split by person, not by rep.</b> One person&rsquo;s reps look alike. If their reps were in both train and test, the model would recognise the person and the score would be inflated.</li>
+  <li><b>Test persons are never used to pick the best epoch.</b> Two training persons are held out inside each round for that.</li>
+</ul>
+<h3>Why 5 and not another number</h3>
+<div class="tablewrap"><table>
+<tr><th>Choice</th><th>Persons per test group</th><th>Cost</th><th>Verdict</th></tr>
+<tr><td>2-fold</td><td>9</td><td>cheap</td><td>trains on only half the data</td></tr>
+<tr><td><b>5-fold</b></td><td>3&ndash;4</td><td>5 trainings</td><td><span class="tag t-ok">standard compromise</span></td></tr>
+<tr><td>10-fold</td><td>about 2</td><td>10 trainings</td><td>very noisy per fold, 2&times; the time</td></tr>
+<tr><td>Leave-one-person-out</td><td>1</td><td>18 trainings</td><td>most data-efficient but 18&times; the time; possible for the final model only</td></tr>
+</table></div>
+<p>5-fold is a convention, not a law. It is the usual balance between enough training data per round and a stable score. With the GPU you can add repeats (<code>--seeds 0 1 2</code>), which re-draws which persons go in which group, and report the mean over all of them.</p>
+<p>The <b>final model</b> for the product is then trained once on all persons (<code>--final</code>).</p>
+
+<h2 id="timing">6. How long things take</h2>
+<p>Measured on this PC&rsquo;s CPU: 2 epochs, 3 folds, 873 reps (seconds, bars on a square-root scale so the small ones stay visible).</p>
+<div class="bars">
+  <div class="row"><span>Decision tree</span><div class="track"><div class="fill g" style="width:3%"></div></div><span class="num">0.4 s</span></div>
+  <div class="row"><span>Logistic regr.</span><div class="track"><div class="fill g" style="width:4%"></div></div><span class="num">0.6 s</span></div>
+  <div class="row"><span>Random forest</span><div class="track"><div class="fill g" style="width:11%"></div></div><span class="num">5.6 s</span></div>
+  <div class="row"><span>XGBoost</span><div class="track"><div class="fill g" style="width:12%"></div></div><span class="num">6.2 s</span></div>
+  <div class="row"><span>1D-CNN</span><div class="track"><div class="fill" style="width:16%"></div></div><span class="num">10.7 s</span></div>
+  <div class="row"><span>BiLSTM</span><div class="track"><div class="fill" style="width:17%"></div></div><span class="num">12.6 s</span></div>
+  <div class="row"><span>BiGRU+attn</span><div class="track"><div class="fill" style="width:21%"></div></div><span class="num">18.5 s</span></div>
+  <div class="row"><span>ST-GCN</span><div class="track"><div class="fill" style="width:36%"></div></div><span class="num">54.9 s</span></div>
+  <div class="row"><span>Transformer</span><div class="track"><div class="fill o" style="width:100%"></div></div><span class="num">460 s</span></div>
+</div>
+<div class="callout warn">The transformer needs about 77 s per epoch per fold on this CPU. The full run (60 epochs, 5 folds) is roughly <b>6&ndash;8 hours here</b> (early stopping may shorten it), and minutes on the lab GPU. Run <code>main</code> and <code>ablation</code> on the lab machine only.</div>
+
+<h2 id="morning">7. Plan for the morning</h2>
+<ul class="check">
+  <li><span class="when">15 min</span><b>Restore p94&ndash;p99 first.</b> Copy (not move) the six folders from your other folder into <code>Temp_Dataset\preprocessed_data\</code>; check each has <code>points3d.trc, advancedangles.csv, reps.csv, rep_features.csv, meta.json, results.json</code> (p95 had an error in the log); then rebuild:
+<pre><code>cd squat_error_study
+C:\squat_venv\Scripts\python.exe scripts\build_manifest.py
+C:\squat_venv\Scripts\python.exe scripts\build_dataset.py
+C:\squat_venv\Scripts\python.exe scripts\make_data_report.py</code></pre>
+  All recordings share the same settings, so no further check is needed. <b>No code changes are needed</b> and the 9-model crash test does not have to be repeated: the baselines run below is the check that the new data works. Per-person problems are in <code>docs/data_quality_report.html</code> (persons N and O should show 7 recordings each).</li>
+  <li><span class="when">5 min</span><b>Install notebook packages</b> (<code>jupyter</code>, <code>ipykernel</code> are in <code>requirements.txt</code>, not yet installed).
+<pre><code>C:\squat_venv\Scripts\python.exe -m pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu</code></pre></li>
+  <li><span class="when">2 min</span><b>Delete the 10 <code>*_smoketest</code> folders</b> in <code>results/runs/</code> (they are test output).</li>
+  <li><span class="when">10 min</span><b>Run the baselines</b> on this PC, then open the figures.
+<pre><code>cd squat_error_study
+C:\squat_venv\Scripts\python.exe scripts\run_cv.py --models decision_tree logreg random_forest xgboost --name baselines</code></pre></li>
+  <li><span class="when">10 min</span><b>Set up the lab PC:</b> <code>git pull</code>, then <code>.\scripts\setup_env.ps1 -Gpu</code> (or <code>bash scripts/setup_env.sh gpu</code>). Copy <code>data/recordings/</code> only if you want to rebuild the dataset.</li>
+  <li><span class="when">30&ndash;90 min</span><b>Main comparison on the GPU:</b>
+<pre><code>python scripts\run_cv.py --name main --seeds 0 1 2</code></pre></li>
+  <li><span class="when">30&ndash;60 min</span><b>Ablation on the GPU</b> (build T=32 and T=128 first):
+<pre><code>python scripts\build_dataset.py --T 32
+python scripts\build_dataset.py --T 128
+python scripts\run_ablation.py</code></pre></li>
+  <li><span class="when">20 min</span><b>Robustness run:</b> set <code>max_trunk_missing: null</code> in a copy of the config and re-run the main comparison; compare both.</li>
+  <li><span class="when">20 min</span><b>Read the results</b> in <code>notebooks/02_results.ipynb</code> or the PNGs; choose the final model (best macro-F1; ties go to the one with usable frame attention).</li>
+  <li><span class="when">half a day</span><b>Angle validation</b> (Kinovea, a few people, Bland&ndash;Altman). Separate task; probably not before the afternoon.</li>
+</ul>
+<p><b>Realistic target by the afternoon:</b> baselines, the full model comparison, ablation and all figures. The angle validation, plugging the model into the product, and the paper text need more time.</p>
+
+<h2 id="memory">8. Closing and reopening</h2>
+<div class="callout">A new session does not remember this conversation. The project state is saved in the assistant&rsquo;s memory folder, and <code>squat_error_study/README.md</code> lists every command. Tomorrow, open the session in the same folder and say <b>&ldquo;continue the squat study&rdquo;</b>, then paste any error text you hit.</div>
+
+</div>
+</body>
+</html>

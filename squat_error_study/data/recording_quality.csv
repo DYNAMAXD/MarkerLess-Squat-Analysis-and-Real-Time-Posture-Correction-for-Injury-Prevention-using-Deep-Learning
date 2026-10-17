@@ -1,0 +1,133 @@
+recording,person,label,reps,status,problem_reps,notes,usable_reps,clean_reps
+p1,A,correct,11,clean,,,11,11
+p2,A,insufficient_depth,11,clean,"1, 11","odd-duration reps: 1, 11",11,9
+p3,A,forward_lean,10,clean,"5, 9","odd-duration reps: 5, 9",10,8
+p4,A,knee_valgus,0,excluded,,KEY_INFO: no csv reports; KEY_INFO: no csv reports; no reps.csv,0,0
+p5,A,knee_varus,10,clean,,,10,10
+p6,A,heel_lift,10,clean,,,10,10
+p7,B,correct,13,neck_missing,"all reps (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)","Neck missing: trunk angles unreliable; 13 reps (more than 12: the last ones may be false splits); upper-body joints missing: Head, Nose, LShoulder",0,0
+p8,B,insufficient_depth,14,neck_missing,"all reps (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14)","Neck missing: trunk angles unreliable; 14 reps (more than 12: the last ones may be false splits); odd-duration reps: 1; upper-body joints missing: Head, Nose",0,0
+p9,B,forward_lean,13,neck_missing,"all reps (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)",Neck missing: trunk angles unreliable; 13 reps (more than 12: the last ones may be false splits); odd-duration reps: 13,0,0
+p10,B,knee_valgus,11,neck_missing,"all reps (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)","Neck missing: trunk angles unreliable; odd-duration reps: 11; upper-body joints missing: Head, Nose, LShoulder",0,0
+p11,B,knee_varus,11,neck_missing,"all reps (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)",Neck missing: trunk angles unreliable; odd-duration reps: 11; upper-body joints missing: LShoulder,0,0
+p12,B,heel_lift,12,usable_notes,,"upper-body joints missing: Head, Nose",12,12
+p13,B,abnormal_tempo,12,excluded,,abnormal_tempo class dropped (protocol not followed),0,0
+p14,C,correct,12,usable_notes,1,"odd-duration reps: 1; upper-body joints missing: Head, Nose, LShoulder, LElbow",12,11
+p15,C,insufficient_depth,11,usable_notes,,"upper-body joints missing: Head, Nose, LShoulder, LElbow",11,11
+p16,C,forward_lean,13,usable_notes,1,13 reps (more than 12: the last ones may be false splits); odd-duration reps: 1,13,12
+p17,C,knee_valgus,14,usable_notes,1,14 reps (more than 12: the last ones may be false splits); odd-duration reps: 1; upper-body joints missing: LShoulder,14,13
+p18,C,knee_varus,12,usable_notes,,upper-body joints missing: LShoulder,12,12
+p19,C,heel_lift,13,usable_notes,,13 reps (more than 12: the last ones may be false splits),13,13
+p20,C,abnormal_tempo,17,excluded,,abnormal_tempo class dropped (protocol not followed),0,0
+p21,D,correct,13,neck_missing,"all reps (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)","Neck missing: trunk angles unreliable; 13 reps (more than 12: the last ones may be false splits); upper-body joints missing: Head, Nose, RShoulder, LShoulder",0,0
+p22,E_PANTS_MALE,correct,10,excluded,,excluded person,0,0
+p23,D,insufficient_depth,10,neck_missing,"all reps (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)","Neck missing: trunk angles unreliable; odd-duration reps: 10; upper-body joints missing: Head, Nose, RShoulder",0,0
+p24,E_PANTS_MALE,insufficient_depth,10,excluded,,excluded person,0,0
+p25,D,forward_lean,9,usable_notes,9,"odd-duration reps: 9; upper-body joints missing: Head, RShoulder",9,8
+p26,E_PANTS_MALE,forward_lean,10,excluded,,excluded person,0,0
+p27,D,knee_valgus,10,neck_missing,"all reps (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)","Neck missing: trunk angles unreliable; upper-body joints missing: Head, Nose, RShoulder, LShoulder",0,0
+p28,E_PANTS_MALE,knee_valgus,9,excluded,,excluded person,0,0
+p29,D,knee_varus,10,usable_notes,10,"odd-duration reps: 10; upper-body joints missing: Head, Nose, RShoulder",10,9
+p30,E_PANTS_MALE,knee_varus,10,excluded,,excluded person,0,0
+p31,D,heel_lift,11,usable_notes,11,"odd-duration reps: 11; upper-body joints missing: Head, Nose, RShoulder",11,10
+p32,E_PANTS_MALE,heel_lift,10,excluded,,excluded person,0,0
+p33,D,abnormal_tempo,10,excluded,,abnormal_tempo class dropped (protocol not followed),0,0
+p34,E_PANTS_MALE,abnormal_tempo,10,excluded,,excluded person; abnormal_tempo class dropped (protocol not followed),0,0
+p35,F,correct,10,neck_missing,"all reps (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)","Neck missing: trunk angles unreliable; upper-body joints missing: Head, Nose, RShoulder",0,0
+p36,F,insufficient_depth,10,neck_missing,"all reps (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)","Neck missing: trunk angles unreliable; odd-duration reps: 10; upper-body joints missing: Head, Nose, RShoulder, LShoulder",0,0
+p37,F,forward_lean,10,usable_notes,,"upper-body joints missing: Head, Nose, RShoulder",10,10
+p38,F,knee_valgus,10,usable_notes,,"upper-body joints missing: Head, RShoulder",10,10
+p39,F,knee_varus,10,neck_missing,"all reps (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)","Neck missing: trunk angles unreliable; upper-body joints missing: Head, RShoulder",0,0
+p40,F,heel_lift,10,clean,,,10,10
+p41,F,abnormal_tempo,10,excluded,,abnormal_tempo class dropped (protocol not followed),0,0
+p42,G,correct,10,usable_notes,10,odd-duration reps: 10; upper-body joints missing: Head,10,9
+p43,G,insufficient_depth,10,usable_notes,,"upper-body joints missing: Head, RShoulder, LShoulder",10,10
+p44,G,forward_lean,10,clean,10,odd-duration reps: 10,10,9
+p45,G,knee_valgus,10,usable_notes,10,odd-duration reps: 10; upper-body joints missing: Head,10,9
+p46,G,knee_varus,10,usable_notes,10,odd-duration reps: 10; upper-body joints missing: Head,10,9
+p47,G,heel_lift,10,usable_notes,10,odd-duration reps: 10; upper-body joints missing: Head,10,9
+p48,G,abnormal_tempo,12,excluded,,abnormal_tempo class dropped (protocol not followed),0,0
+p49,H,correct,10,usable_notes,10,odd-duration reps: 10; upper-body joints missing: Head,10,9
+p50,H,insufficient_depth,1,excluded,,KEY_INFO: just one rep data recorded; KEY_INFO: just one rep data recorded; only 1 reps,0,0
+p51,H,forward_lean,11,clean,11,odd-duration reps: 11,11,10
+p52,H,knee_valgus,10,usable_notes,10,odd-duration reps: 10; upper-body joints missing: Head,10,9
+p53,H,knee_varus,10,usable_notes,,upper-body joints missing: Head,10,10
+p54,H,heel_lift,10,usable_notes,,upper-body joints missing: Head,10,10
+p55,H,abnormal_tempo,12,excluded,,abnormal_tempo class dropped (protocol not followed),0,0
+p56,I,correct,10,clean,10,odd-duration reps: 10,10,9
+p57,I,insufficient_depth,10,usable_notes,10,"odd-duration reps: 10; upper-body joints missing: Head, LShoulder",10,9
+p58,I,forward_lean,10,clean,10,odd-duration reps: 10,10,9
+p59,I,knee_valgus,10,neck_missing,"all reps (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)",Neck missing: trunk angles unreliable; odd-duration reps: 10,0,0
+p60,I,knee_varus,10,clean,10,odd-duration reps: 10,10,9
+p61,I,heel_lift,10,clean,10,odd-duration reps: 10,10,9
+p62,I,abnormal_tempo,12,excluded,,abnormal_tempo class dropped (protocol not followed),0,0
+p63,J,correct,11,clean,11,odd-duration reps: 11,11,10
+p64,J,insufficient_depth,11,clean,11,odd-duration reps: 11,11,10
+p65,J,forward_lean,9,clean,9,odd-duration reps: 9,9,8
+p66,J,knee_valgus,11,clean,11,odd-duration reps: 11,11,10
+p67,J,knee_varus,10,clean,10,odd-duration reps: 10,10,9
+p68,J,heel_lift,9,clean,,,9,9
+p69,J,abnormal_tempo,12,excluded,,abnormal_tempo class dropped (protocol not followed),0,0
+p70,K,correct,1,excluded,,KEY_INFO: just one rep data recorded; KEY_INFO: just one rep data recorded; only 1 reps,0,0
+p71,K,insufficient_depth,2,excluded,,KEY_INFO: just two rep data recorded; KEY_INFO: just two rep data recorded; only 2 reps,0,0
+p72,K,forward_lean,10,clean,10,odd-duration reps: 10,10,9
+p73,K,knee_valgus,10,clean,,,10,10
+p74,K,knee_varus,10,clean,,,10,10
+p75,K,heel_lift,10,clean,,,10,10
+p76,K,abnormal_tempo,1,excluded,,KEY_INFO: just one rep data recorded; KEY_INFO: just one rep data recorded; abnormal_tempo class dropped (protocol not followed); only 1 reps,0,0
+p77,L,correct,10,clean,"1, 10","odd-duration reps: 1, 10",10,8
+p78,L,insufficient_depth,10,clean,10,odd-duration reps: 10,10,9
+p79,L,forward_lean,10,clean,10,odd-duration reps: 10,10,9
+p80,L,knee_valgus,10,clean,,,10,10
+p81,L,knee_varus,10,clean,10,odd-duration reps: 10,10,9
+p82,L,heel_lift,10,clean,10,odd-duration reps: 10,10,9
+p83,L,abnormal_tempo,12,excluded,,abnormal_tempo class dropped (protocol not followed),0,0
+p84,M,correct,10,clean,10,odd-duration reps: 10,10,9
+p85,M,insufficient_depth,10,clean,10,odd-duration reps: 10,10,9
+p86,M,forward_lean,10,clean,10,odd-duration reps: 10,10,9
+p87,M,knee_valgus,10,clean,10,odd-duration reps: 10,10,9
+p88,M,knee_varus,10,clean,10,odd-duration reps: 10,10,9
+p89,M,heel_lift,10,clean,10,odd-duration reps: 10,10,9
+p90,M,abnormal_tempo,12,excluded,,abnormal_tempo class dropped (protocol not followed),0,0
+p91,N,correct,10,clean,10,odd-duration reps: 10,10,9
+p92,N,insufficient_depth,10,clean,10,odd-duration reps: 10,10,9
+p93,N,forward_lean,10,clean,10,odd-duration reps: 10,10,9
+p94,N,knee_valgus,10,clean,10,odd-duration reps: 10,10,9
+p95,N,knee_varus,10,clean,10,odd-duration reps: 10,10,9
+p96,N,heel_lift,10,clean,10,odd-duration reps: 10,10,9
+p97,N,abnormal_tempo,17,excluded,,abnormal_tempo class dropped (protocol not followed),0,0
+p98,O,correct,10,clean,10,odd-duration reps: 10,10,9
+p99,O,insufficient_depth,10,clean,10,odd-duration reps: 10,10,9
+p100,O,forward_lean,10,clean,10,odd-duration reps: 10,10,9
+p101,O,knee_valgus,10,clean,10,odd-duration reps: 10,10,9
+p102,O,knee_varus,10,clean,10,odd-duration reps: 10,10,9
+p103,O,heel_lift,10,clean,,,10,10
+p104,O,abnormal_tempo,12,excluded,,abnormal_tempo class dropped (protocol not followed),0,0
+p105,P,correct,0,excluded,,KEY_INFO: no rep data; KEY_INFO: no rep data; only 0 reps,0,0
+p106,P,insufficient_depth,10,clean,,,10,10
+p107,P,forward_lean,10,clean,1,odd-duration reps: 1,10,9
+p108,P,knee_valgus,10,clean,10,odd-duration reps: 10,10,9
+p109,P,knee_varus,10,clean,,,10,10
+p110,P,heel_lift,10,clean,1,odd-duration reps: 1,10,9
+p111,P,abnormal_tempo,11,excluded,,abnormal_tempo class dropped (protocol not followed),0,0
+p112,Q,correct,10,clean,10,odd-duration reps: 10,10,9
+p113,Q,insufficient_depth,10,usable_notes,10,odd-duration reps: 10; upper-body joints missing: Nose,10,9
+p114,Q,forward_lean,9,clean,,,9,9
+p115,Q,knee_valgus,10,clean,,,10,10
+p116,Q,knee_varus,10,clean,,,10,10
+p117,Q,heel_lift,12,clean,,,12,12
+p118,Q,abnormal_tempo,12,excluded,,abnormal_tempo class dropped (protocol not followed),0,0
+p119,R,correct,10,clean,10,odd-duration reps: 10,10,9
+p120,R,insufficient_depth,10,clean,,,10,10
+p121,R,forward_lean,10,clean,,,10,10
+p123,R,knee_valgus,10,clean,,,10,10
+p124,R,knee_varus,10,clean,10,odd-duration reps: 10,10,9
+p125,R,heel_lift,10,clean,,,10,10
+p126,R,abnormal_tempo,12,excluded,,abnormal_tempo class dropped (protocol not followed),0,0
+p127,S,correct,10,clean,,,10,10
+p128,S,insufficient_depth,10,clean,,,10,10
+p129,S,forward_lean,9,clean,,,9,9
+p130,S,knee_valgus,9,clean,,,9,9
+p131,S,knee_varus,11,clean,11,odd-duration reps: 11,11,10
+p132,S,heel_lift,12,clean,12,odd-duration reps: 12,12,11
+p133,S,abnormal_tempo,12,excluded,,abnormal_tempo class dropped (protocol not followed),0,0

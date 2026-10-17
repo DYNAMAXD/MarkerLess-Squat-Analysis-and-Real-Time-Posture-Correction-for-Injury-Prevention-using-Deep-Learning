@@ -1,0 +1,133 @@
+recording_id,person,label,n_reps,rep_count_note,include,exclude_reason,is_tempo
+p1,A,correct,11,,True,,False
+p2,A,insufficient_depth,11,,True,,False
+p3,A,forward_lean,10,,True,,False
+p4,A,knee_valgus,0,,False,KEY_INFO: no csv reports; no reps.csv,False
+p5,A,knee_varus,10,,True,,False
+p6,A,heel_lift,10,,True,,False
+p7,B,correct,13,check (more than 12 reps),True,,False
+p8,B,insufficient_depth,14,check (more than 12 reps),True,,False
+p9,B,forward_lean,13,check (more than 12 reps),True,,False
+p10,B,knee_valgus,11,,True,,False
+p11,B,knee_varus,11,,True,,False
+p12,B,heel_lift,12,,True,,False
+p13,B,abnormal_tempo,12,,False,abnormal_tempo class dropped (protocol not followed),True
+p14,C,correct,12,,True,,False
+p15,C,insufficient_depth,12,,True,,False
+p16,C,forward_lean,13,check (more than 12 reps),True,,False
+p17,C,knee_valgus,14,check (more than 12 reps),True,,False
+p18,C,knee_varus,12,,True,,False
+p19,C,heel_lift,13,check (more than 12 reps),True,,False
+p20,C,abnormal_tempo,17,check (more than 12 reps),False,abnormal_tempo class dropped (protocol not followed),True
+p21,D,correct,13,check (more than 12 reps),True,,False
+p22,E_PANTS_MALE,correct,10,,False,excluded person,False
+p23,D,insufficient_depth,10,,True,,False
+p24,E_PANTS_MALE,insufficient_depth,10,,False,excluded person,False
+p25,D,forward_lean,9,,True,,False
+p26,E_PANTS_MALE,forward_lean,10,,False,excluded person,False
+p27,D,knee_valgus,10,,True,,False
+p28,E_PANTS_MALE,knee_valgus,9,,False,excluded person,False
+p29,D,knee_varus,10,,True,,False
+p30,E_PANTS_MALE,knee_varus,10,,False,excluded person,False
+p31,D,heel_lift,11,,True,,False
+p32,E_PANTS_MALE,heel_lift,10,,False,excluded person,False
+p33,D,abnormal_tempo,10,,False,abnormal_tempo class dropped (protocol not followed),True
+p34,E_PANTS_MALE,abnormal_tempo,10,,False,excluded person; abnormal_tempo class dropped (protocol not followed),True
+p35,F,correct,10,,True,,False
+p36,F,insufficient_depth,10,,True,,False
+p37,F,forward_lean,10,,True,,False
+p38,F,knee_valgus,10,,True,,False
+p39,F,knee_varus,10,,True,,False
+p40,F,heel_lift,10,,True,,False
+p41,F,abnormal_tempo,10,,False,abnormal_tempo class dropped (protocol not followed),True
+p42,G,correct,10,,True,,False
+p43,G,insufficient_depth,10,,True,,False
+p44,G,forward_lean,10,,True,,False
+p45,G,knee_valgus,10,,True,,False
+p46,G,knee_varus,10,,True,,False
+p47,G,heel_lift,10,,True,,False
+p48,G,abnormal_tempo,12,,False,abnormal_tempo class dropped (protocol not followed),True
+p49,H,correct,10,,True,,False
+p50,H,insufficient_depth,1,,False,KEY_INFO: just one rep data recorded; only 1 reps,False
+p51,H,forward_lean,11,,True,,False
+p52,H,knee_valgus,10,,True,,False
+p53,H,knee_varus,10,,True,,False
+p54,H,heel_lift,10,,True,,False
+p55,H,abnormal_tempo,12,,False,abnormal_tempo class dropped (protocol not followed),True
+p56,I,correct,10,,True,,False
+p57,I,insufficient_depth,10,,True,,False
+p58,I,forward_lean,10,,True,,False
+p59,I,knee_valgus,10,,True,,False
+p60,I,knee_varus,10,,True,,False
+p61,I,heel_lift,10,,True,,False
+p62,I,abnormal_tempo,12,,False,abnormal_tempo class dropped (protocol not followed),True
+p63,J,correct,11,,True,,False
+p64,J,insufficient_depth,11,,True,,False
+p65,J,forward_lean,9,,True,,False
+p66,J,knee_valgus,11,,True,,False
+p67,J,knee_varus,10,,True,,False
+p68,J,heel_lift,9,,True,,False
+p69,J,abnormal_tempo,12,,False,abnormal_tempo class dropped (protocol not followed),True
+p70,K,correct,1,,False,KEY_INFO: just one rep data recorded; only 1 reps,False
+p71,K,insufficient_depth,2,,False,KEY_INFO: just two rep data recorded; only 2 reps,False
+p72,K,forward_lean,10,,True,,False
+p73,K,knee_valgus,10,,True,,False
+p74,K,knee_varus,10,,True,,False
+p75,K,heel_lift,10,,True,,False
+p76,K,abnormal_tempo,1,,False,KEY_INFO: just one rep data recorded; abnormal_tempo class dropped (protocol not followed); only 1 reps,True
+p77,L,correct,10,,True,,False
+p78,L,insufficient_depth,10,,True,,False
+p79,L,forward_lean,10,,True,,False
+p80,L,knee_valgus,10,,True,,False
+p81,L,knee_varus,10,,True,,False
+p82,L,heel_lift,10,,True,,False
+p83,L,abnormal_tempo,12,,False,abnormal_tempo class dropped (protocol not followed),True
+p84,M,correct,10,,True,,False
+p85,M,insufficient_depth,10,,True,,False
+p86,M,forward_lean,10,,True,,False
+p87,M,knee_valgus,10,,True,,False
+p88,M,knee_varus,10,,True,,False
+p89,M,heel_lift,10,,True,,False
+p90,M,abnormal_tempo,12,,False,abnormal_tempo class dropped (protocol not followed),True
+p91,N,correct,10,,True,,False
+p92,N,insufficient_depth,10,,True,,False
+p93,N,forward_lean,10,,True,,False
+p94,N,knee_valgus,10,,True,,False
+p95,N,knee_varus,10,,True,,False
+p96,N,heel_lift,10,,True,,False
+p97,N,abnormal_tempo,17,check (more than 12 reps),False,abnormal_tempo class dropped (protocol not followed),True
+p98,O,correct,10,,True,,False
+p99,O,insufficient_depth,10,,True,,False
+p100,O,forward_lean,10,,True,,False
+p101,O,knee_valgus,10,,True,,False
+p102,O,knee_varus,10,,True,,False
+p103,O,heel_lift,10,,True,,False
+p104,O,abnormal_tempo,12,,False,abnormal_tempo class dropped (protocol not followed),True
+p105,P,correct,0,,False,KEY_INFO: no rep data; only 0 reps,False
+p106,P,insufficient_depth,10,,True,,False
+p107,P,forward_lean,10,,True,,False
+p108,P,knee_valgus,10,,True,,False
+p109,P,knee_varus,10,,True,,False
+p110,P,heel_lift,10,,True,,False
+p111,P,abnormal_tempo,11,,False,abnormal_tempo class dropped (protocol not followed),True
+p112,Q,correct,10,,True,,False
+p113,Q,insufficient_depth,10,,True,,False
+p114,Q,forward_lean,9,,True,,False
+p115,Q,knee_valgus,10,,True,,False
+p116,Q,knee_varus,10,,True,,False
+p117,Q,heel_lift,12,,True,,False
+p118,Q,abnormal_tempo,12,,False,abnormal_tempo class dropped (protocol not followed),True
+p119,R,correct,10,,True,,False
+p120,R,insufficient_depth,10,,True,,False
+p121,R,forward_lean,10,,True,,False
+p123,R,knee_valgus,10,,True,,False
+p124,R,knee_varus,10,,True,,False
+p125,R,heel_lift,10,,True,,False
+p126,R,abnormal_tempo,12,,False,abnormal_tempo class dropped (protocol not followed),True
+p127,S,correct,10,,True,,False
+p128,S,insufficient_depth,10,,True,,False
+p129,S,forward_lean,9,,True,,False
+p130,S,knee_valgus,9,,True,,False
+p131,S,knee_varus,11,,True,,False
+p132,S,heel_lift,12,,True,,False
+p133,S,abnormal_tempo,12,,False,abnormal_tempo class dropped (protocol not followed),True

@@ -1,0 +1,107 @@
+{
+ "experiment": "random_forest",
+ "model": "random_forest",
+ "classes": [
+  "correct",
+  "insufficient_depth",
+  "forward_lean",
+  "knee_valgus",
+  "knee_varus",
+  "heel_lift"
+ ],
+ "n_params": null,
+ "macro_f1_mean": 0.490586558259241,
+ "macro_f1_std": 0.030681701479352303,
+ "accuracy_mean": 0.5186168131343152,
+ "accuracy_std": 0.028064379266850705,
+ "rec_macro_f1_mean": 0.4974867724867725,
+ "rec_macro_f1_std": 0.03968306877954153,
+ "rec_accuracy_mean": 0.5401470588235294,
+ "per_class_f1_pooled": [
+  0.2471042471042471,
+  0.5838926174496645,
+  0.6010928961748634,
+  0.43346007604562736,
+  0.5032679738562091,
+  0.6417112299465241
+ ],
+ "confusion_pooled": [
+  [
+   32,
+   7,
+   20,
+   22,
+   34,
+   19
+  ],
+  [
+   9,
+   87,
+   19,
+   7,
+   11,
+   0
+  ],
+  [
+   18,
+   24,
+   110,
+   16,
+   1,
+   1
+  ],
+  [
+   14,
+   18,
+   28,
+   57,
+   2,
+   25
+  ],
+  [
+   35,
+   20,
+   11,
+   0,
+   77,
+   20
+  ],
+  [
+   17,
+   9,
+   8,
+   17,
+   18,
+   120
+  ]
+ ],
+ "seconds": 8.6,
+ "data_settings": {
+  "T": 64,
+  "min_rep_s": 1.0,
+  "max_rep_s": 12.0,
+  "classes": [
+   "correct",
+   "insufficient_depth",
+   "forward_lean",
+   "knee_valgus",
+   "knee_varus",
+   "heel_lift"
+  ],
+  "max_missing_core": 0.25,
+  "max_trunk_missing": 0.5,
+  "inputs": "both",
+  "velocity": true,
+  "tempo": true,
+  "view": "both"
+ },
+ "model_settings": {
+  "d_model": 64,
+  "n_blocks": 4,
+  "n_heads": 4,
+  "dropout": 0.1,
+  "spatial_attn": true,
+  "temporal_attn": true,
+  "pooling": "attn"
+ }
+}

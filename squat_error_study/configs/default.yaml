@@ -1,0 +1,58 @@
+# =============================================================================
+# default.yaml  -  every setting of the squat study in ONE place
+# Copy this file (e.g. configs/lab_gpu.yaml) to change settings without touching code.
+# Paths are relative to the squat_error_study/ folder.
+# =============================================================================
+
+# ---- 1. Paths ---------------------------------------------------------------
+paths:
+  recordings: data/recordings          # copied recordings (build_manifest.py)
+  manifest:   data/manifest.csv
+  processed:  data/processed           # compact .npz written by build_dataset.py
+  runs:       results/runs             # every experiment run gets its own sub-folder here
+
+# ---- 2. Data / features -----------------------------------------------------
+data:
+  T: 64                  # frames per rep after resampling (try 32 / 64 / 128 in the ablation)
+  min_rep_s: 1.0         # reps shorter than this are dropped (almost surely a false split)
+  max_rep_s: 12.0        # reps longer than this are dropped
+  # The 6 classes of the study. abnormal_tempo is dropped (build_manifest.py excludes those recordings).
+  classes: [correct, insufficient_depth, forward_lean, knee_valgus, knee_varus, heel_lift]
+  # --- data-quality filters (see README, "Known data problems") ---
+  max_missing_core: 0.25   # drop reps with a lower-body joint missing in more than 25% of frames
+  max_trunk_missing: 0.5   # drop reps whose Neck is missing in more than 50% of frames (null = keep them)
+  # --- input switches (used by the ablation study) ---
+  inputs: both           # joints | frame | both     (joint tokens / angle features / both)
+  velocity: true         # false -> joint velocity channels are zeroed
+  tempo: true            # false -> the 4 tempo numbers are zeroed
+  view: both             # both | side | front       (SIMULATED view: drops one body axis, joints only)
+
+# ---- 3. Cross-validation ----------------------------------------------------
+cv:
+  n_splits: 5            # StratifiedGroupKFold, groups = PERSON (never split a person across folds)
+  seeds: [0]             # use [0, 1, 2] for the final paper numbers
+  val_persons: 2         # persons held out of the TRAINING folds to pick the best epoch (no test leakage)
+
+# ---- 4. Neural-network training --------------------------------------------
+train:
+  epochs: 60
+  batch_size: 64
+  lr: 0.001
+  weight_decay: 0.01
+  label_smoothing: 0.05
+  noise_std: 0.01        # gaussian noise on joint channels (training only)
+  patience: 15           # stop if validation macro-F1 has not improved for this many epochs
+  num_workers: 0
+
+# ---- 5. Models --------------------------------------------------------------
+# Names understood by squat_study.models.build_model / train.run_tree_model
+run_models: [decision_tree, logreg, random_forest, xgboost, cnn1d, bigru_attn, bilstm, stgcn, transformer]
+
+model:
+  d_model: 64            # transformer / GRU width
+  n_blocks: 4            # transformer blocks
+  n_heads: 4
+  dropout: 0.1
+  spatial_attn: true     # transformer ablation switches
+  temporal_attn: true
+  pooling: attn          # attn | mean   (attention pooling gives alpha, the "which frames mattered" weights)

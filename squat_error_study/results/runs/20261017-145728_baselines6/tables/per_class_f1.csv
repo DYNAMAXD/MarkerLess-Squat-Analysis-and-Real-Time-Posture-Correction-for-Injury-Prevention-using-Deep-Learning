@@ -1,0 +1,5 @@
+,correct,insufficient_depth,forward_lean,knee_valgus,knee_varus,heel_lift
+Decision tree,0.332,0.454,0.396,0.323,0.305,0.593
+Logistic regression,0.341,0.566,0.5,0.521,0.405,0.567
+Random forest,0.247,0.584,0.601,0.433,0.503,0.642
+XGBoost,0.317,0.624,0.587,0.597,0.492,0.682

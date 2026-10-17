@@ -1,0 +1,1051 @@
+{
+ "T": 64,
+ "n_reps": 1068,
+ "joint_names": [
+  "Hip",
+  "RHip",
+  "RKnee",
+  "RAnkle",
+  "RBigToe",
+  "RSmallToe",
+  "RHeel",
+  "LHip",
+  "LKnee",
+  "LAnkle",
+  "LBigToe",
+  "LSmallToe",
+  "LHeel",
+  "Neck",
+  "Head",
+  "Nose",
+  "RShoulder",
+  "RElbow",
+  "RWrist",
+  "LShoulder",
+  "LElbow",
+  "LWrist"
+ ],
+ "joint_channels": [
+  "pos_lat",
+  "pos_up",
+  "pos_fwd",
+  "vel_lat",
+  "vel_up",
+  "vel_fwd"
+ ],
+ "frame_feature_names": [
+  "knee_valgus_L",
+  "knee_valgus_R",
+  "head_forward_angle",
+  "squat_depth_knee_deg",
+  "sagittal_flexion_trunk",
+  "hip_angle_L",
+  "hip_angle_R",
+  "hip_flexion_L",
+  "hip_flexion_R",
+  "knee_flexion_L",
+  "knee_flexion_R",
+  "ankle_dorsiflexion_proxy_L",
+  "ankle_dorsiflexion_proxy_R",
+  "lumbar_curvature_proxy",
+  "knee_valgus_body_L",
+  "knee_valgus_body_R",
+  "heel_height_L",
+  "heel_height_R",
+  "hip_height_rel"
+ ],
+ "tempo_names": [
+  "rep_dur_s",
+  "descent_s",
+  "ascent_s",
+  "bottom_frac"
+ ],
+ "summary_names": [
+  "bottom_s",
+  "knee_valgus_L_bottom",
+  "knee_valgus_L_min",
+  "knee_valgus_L_max",
+  "knee_valgus_R_bottom",
+  "knee_valgus_R_min",
+  "knee_valgus_R_max",
+  "head_forward_angle_bottom",
+  "head_forward_angle_min",
+  "head_forward_angle_max",
+  "squat_depth_knee_deg_bottom",
+  "squat_depth_knee_deg_min",
+  "squat_depth_knee_deg_max",
+  "sagittal_flexion_trunk_bottom",
+  "sagittal_flexion_trunk_min",
+  "sagittal_flexion_trunk_max",
+  "hip_angle_L_bottom",
+  "hip_angle_L_min",
+  "hip_angle_L_max",
+  "hip_angle_R_bottom",
+  "hip_angle_R_min",
+  "hip_angle_R_max",
+  "hip_flexion_L_bottom",
+  "hip_flexion_L_min",
+  "hip_flexion_L_max",
+  "hip_flexion_R_bottom",
+  "hip_flexion_R_min",
+  "hip_flexion_R_max",
+  "knee_flexion_L_bottom",
+  "knee_flexion_L_min",
+  "knee_flexion_L_max",
+  "knee_flexion_R_bottom",
+  "knee_flexion_R_min",
+  "knee_flexion_R_max",
+  "ankle_dorsiflexion_proxy_L_bottom",
+  "ankle_dorsiflexion_proxy_L_min",
+  "ankle_dorsiflexion_proxy_L_max",
+  "ankle_dorsiflexion_proxy_R_bottom",
+  "ankle_dorsiflexion_proxy_R_min",
+  "ankle_dorsiflexion_proxy_R_max",
+  "lumbar_curvature_proxy_bottom",
+  "lumbar_curvature_proxy_min",
+  "lumbar_curvature_proxy_max",
+  "rep_dur_s",
+  "descent_s",
+  "ascent_s"
+ ],
+ "recordings": {
+  "p1": {
+   "leg_length_m": 0.8388085517908654,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 11,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p2": {
+   "leg_length_m": 0.8333732584690684,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 11,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p3": {
+   "leg_length_m": 0.8240549492728737,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p5": {
+   "leg_length_m": 0.8455154439876815,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p6": {
+   "leg_length_m": 0.8361995123632096,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p7": {
+   "leg_length_m": 0.8939082537728449,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 13,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Neck": 1.0,
+    "Head": 1.0,
+    "Nose": 1.0,
+    "LShoulder": 1.0
+   }
+  },
+  "p8": {
+   "leg_length_m": 0.8895475935518486,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 14,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Neck": 1.0,
+    "Head": 1.0,
+    "Nose": 1.0
+   }
+  },
+  "p9": {
+   "leg_length_m": 0.8972456962538159,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 13,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Neck": 1.0
+   }
+  },
+  "p10": {
+   "leg_length_m": 0.8171488238513878,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 11,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Neck": 1.0,
+    "Head": 1.0,
+    "Nose": 1.0,
+    "LShoulder": 1.0
+   }
+  },
+  "p11": {
+   "leg_length_m": 0.8149432063721744,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 11,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Neck": 1.0,
+    "LShoulder": 1.0
+   }
+  },
+  "p12": {
+   "leg_length_m": 0.8164281829780702,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 12,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Head": 1.0,
+    "Nose": 1.0
+   }
+  },
+  "p14": {
+   "leg_length_m": 0.818839620446453,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 12,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Head": 1.0,
+    "Nose": 1.0,
+    "LShoulder": 1.0,
+    "LElbow": 1.0
+   }
+  },
+  "p15": {
+   "leg_length_m": 0.8180534407400453,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 11,
+   "n_dropped": 1,
+   "missing_per_joint": {
+    "Head": 1.0,
+    "Nose": 1.0,
+    "LShoulder": 1.0,
+    "LElbow": 1.0
+   }
+  },
+  "p16": {
+   "leg_length_m": 0.8249850109860937,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 13,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p17": {
+   "leg_length_m": 0.7614415636463233,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 14,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "LShoulder": 1.0
+   }
+  },
+  "p18": {
+   "leg_length_m": 0.8280396851312942,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 12,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "LShoulder": 1.0
+   }
+  },
+  "p19": {
+   "leg_length_m": 0.8425156453919553,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 13,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p21": {
+   "leg_length_m": 0.9596659018120344,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 13,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Neck": 1.0,
+    "Head": 1.0,
+    "Nose": 1.0,
+    "RShoulder": 1.0,
+    "LShoulder": 1.0
+   }
+  },
+  "p23": {
+   "leg_length_m": 0.9514457011821389,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Neck": 1.0,
+    "Head": 1.0,
+    "Nose": 1.0,
+    "RShoulder": 1.0
+   }
+  },
+  "p25": {
+   "leg_length_m": 0.9647514620750732,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 9,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Head": 1.0,
+    "RShoulder": 1.0
+   }
+  },
+  "p27": {
+   "leg_length_m": 0.9641627923233989,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Neck": 1.0,
+    "Head": 1.0,
+    "Nose": 1.0,
+    "RShoulder": 1.0,
+    "LShoulder": 1.0
+   }
+  },
+  "p29": {
+   "leg_length_m": 0.9823761805685767,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Head": 1.0,
+    "Nose": 1.0,
+    "RShoulder": 1.0
+   }
+  },
+  "p31": {
+   "leg_length_m": 0.9731047970754639,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 11,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Head": 1.0,
+    "Nose": 1.0,
+    "RShoulder": 1.0
+   }
+  },
+  "p35": {
+   "leg_length_m": 0.9210911952721056,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Neck": 1.0,
+    "Head": 1.0,
+    "Nose": 1.0,
+    "RShoulder": 1.0
+   }
+  },
+  "p36": {
+   "leg_length_m": 0.8941232677022002,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Neck": 1.0,
+    "Head": 1.0,
+    "Nose": 1.0,
+    "RShoulder": 1.0,
+    "LShoulder": 1.0
+   }
+  },
+  "p37": {
+   "leg_length_m": 0.8866567776133428,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Head": 1.0,
+    "Nose": 1.0,
+    "RShoulder": 1.0
+   }
+  },
+  "p38": {
+   "leg_length_m": 0.8199925719857342,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Head": 1.0,
+    "RShoulder": 1.0
+   }
+  },
+  "p39": {
+   "leg_length_m": 0.8988542851974919,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Neck": 1.0,
+    "Head": 1.0,
+    "RShoulder": 1.0
+   }
+  },
+  "p40": {
+   "leg_length_m": 0.9443187085345338,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p42": {
+   "leg_length_m": 0.8747540033152958,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Head": 1.0
+   }
+  },
+  "p43": {
+   "leg_length_m": 0.8729450082474506,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Head": 1.0,
+    "RShoulder": 1.0,
+    "LShoulder": 1.0
+   }
+  },
+  "p44": {
+   "leg_length_m": 0.8655042311691279,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p45": {
+   "leg_length_m": 0.8858611100296496,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Head": 1.0
+   }
+  },
+  "p46": {
+   "leg_length_m": 0.8587505039527369,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Head": 1.0
+   }
+  },
+  "p47": {
+   "leg_length_m": 0.9005837637120288,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Head": 1.0
+   }
+  },
+  "p49": {
+   "leg_length_m": 0.8253244005817233,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Head": 1.0
+   }
+  },
+  "p51": {
+   "leg_length_m": 0.7696122109279486,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 11,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p52": {
+   "leg_length_m": 0.8151081979370388,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Head": 1.0
+   }
+  },
+  "p53": {
+   "leg_length_m": 0.8092911063222755,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Head": 1.0
+   }
+  },
+  "p54": {
+   "leg_length_m": 0.8334087780872257,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Head": 1.0
+   }
+  },
+  "p56": {
+   "leg_length_m": 0.8770418816685298,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p57": {
+   "leg_length_m": 0.8378093843179981,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Head": 1.0,
+    "LShoulder": 1.0
+   }
+  },
+  "p58": {
+   "leg_length_m": 0.8175506944088289,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p59": {
+   "leg_length_m": 0.8403613033722954,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Neck": 1.0
+   }
+  },
+  "p60": {
+   "leg_length_m": 0.8730067876544558,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p61": {
+   "leg_length_m": 0.8049639484973283,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p63": {
+   "leg_length_m": 0.7696567666787077,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 11,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p64": {
+   "leg_length_m": 0.7635101580828214,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 11,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p65": {
+   "leg_length_m": 0.7626543149375995,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 9,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p66": {
+   "leg_length_m": 0.7724001040539359,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 11,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p67": {
+   "leg_length_m": 0.7593141724501911,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p68": {
+   "leg_length_m": 0.7687416962395256,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 9,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p72": {
+   "leg_length_m": 0.8824912314459166,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p73": {
+   "leg_length_m": 0.8854483050920856,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p74": {
+   "leg_length_m": 0.871602103185155,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p75": {
+   "leg_length_m": 0.8818664660861432,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p77": {
+   "leg_length_m": 0.8675341975048553,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p78": {
+   "leg_length_m": 0.8661621407842247,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p79": {
+   "leg_length_m": 0.8819425542364207,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p80": {
+   "leg_length_m": 0.8729891835115346,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p81": {
+   "leg_length_m": 0.8686303551779437,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p82": {
+   "leg_length_m": 0.8693849516750786,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p84": {
+   "leg_length_m": 0.8721979400479583,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p85": {
+   "leg_length_m": 0.8676563913481458,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p86": {
+   "leg_length_m": 0.8658307089545896,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p87": {
+   "leg_length_m": 0.8653996504444949,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p88": {
+   "leg_length_m": 0.8740410122726889,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p89": {
+   "leg_length_m": 0.8802395483084255,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p91": {
+   "leg_length_m": 0.7411703772513827,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p92": {
+   "leg_length_m": 0.7414018894358478,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p93": {
+   "leg_length_m": 0.7398135240884693,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p94": {
+   "leg_length_m": 0.745071715337552,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p95": {
+   "leg_length_m": 0.7330947957843632,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p96": {
+   "leg_length_m": 0.7445182667028594,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p98": {
+   "leg_length_m": 0.8723650127037453,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p99": {
+   "leg_length_m": 0.8844878357596606,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p100": {
+   "leg_length_m": 0.8786414634759979,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p101": {
+   "leg_length_m": 0.8830975744841375,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p102": {
+   "leg_length_m": 0.8836228776512073,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p103": {
+   "leg_length_m": 0.8929487614546857,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p106": {
+   "leg_length_m": 0.7691291546719392,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p107": {
+   "leg_length_m": 0.7742960726807917,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p108": {
+   "leg_length_m": 0.7695500705151612,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p109": {
+   "leg_length_m": 0.7769522889532441,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p110": {
+   "leg_length_m": 0.7746633369180456,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p112": {
+   "leg_length_m": 0.847119151306484,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p113": {
+   "leg_length_m": 0.8553008616305896,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {
+    "Nose": 1.0
+   }
+  },
+  "p114": {
+   "leg_length_m": 0.8500661585678937,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 9,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p115": {
+   "leg_length_m": 0.850592764996493,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p116": {
+   "leg_length_m": 0.8532106031261896,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p117": {
+   "leg_length_m": 0.8580812199401893,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 12,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p119": {
+   "leg_length_m": 0.887502146141546,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p120": {
+   "leg_length_m": 0.8914024454200531,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p121": {
+   "leg_length_m": 0.8854190105010393,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p123": {
+   "leg_length_m": 0.885796159225553,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p124": {
+   "leg_length_m": 0.8821149953457907,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p125": {
+   "leg_length_m": 0.8956634040752443,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p127": {
+   "leg_length_m": 0.8459614645524988,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p128": {
+   "leg_length_m": 0.8472731994595628,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 10,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p129": {
+   "leg_length_m": 0.8445979687491887,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 9,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p130": {
+   "leg_length_m": 0.8519853166585141,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 9,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p131": {
+   "leg_length_m": 0.8379016806647938,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 11,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  },
+  "p132": {
+   "leg_length_m": 0.8390859521607288,
+   "lr_swapped": false,
+   "fps": 29.97,
+   "n_reps": 12,
+   "n_dropped": 0,
+   "missing_per_joint": {}
+  }
+ },
+ "recordings_lr_swapped_and_fixed": []
+}

@@ -1,0 +1,20 @@
+﻿# Core
+numpy>=1.26,<2.3
+pandas>=2.1
+scipy>=1.11
+scikit-learn>=1.4
+xgboost>=2.0
+pyyaml>=6.0
+tqdm>=4.66
+openpyxl>=3.1        # reads data/KEY_INFO.xlsx
+tabulate>=0.9        # markdown result tables
+# Plots / reports
+matplotlib>=3.8
+seaborn>=0.13
+# Deep learning (CPU wheels by default; scripts/setup_env.* installs the GPU build with -Gpu / gpu)
+torch>=2.3
+# Notebooks
+jupyter>=1.0
+ipykernel>=6.29
+# Dev
+pytest>=8.0
