@@ -56,3 +56,5 @@ research/**/*.npz
 
 # Hugging Face Space: the upload folder is assembled by hf_space/build_space.py
 hf_space/upload/
+hf_space
+hf_space/
