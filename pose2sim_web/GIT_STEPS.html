@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Git steps to share pose2sim_web</title>
+<style>
+:root{--bg:#fff;--ink:#1b1f24;--mut:#5b6470;--line:#d8dbe0;--card:#f6f7f9;--ok:#e6f4ea;--okb:#1e8e3e;--wa:#fef7e0;--wab:#f9ab00}
+@media(prefers-color-scheme:dark){:root{--bg:#14161a;--ink:#e6e8eb;--mut:#9aa3ad;--line:#333;--card:#1e2127;--ok:#16301f;--wa:#38300f}}
+body{font:16px/1.55 system-ui,Segoe UI,sans-serif;max-width:840px;margin:0 auto;padding:20px 16px 70px;color:var(--ink);background:var(--bg)}
+h1{font-size:24px}h2{font-size:19px;margin-top:30px;padding-top:12px;border-top:2px solid var(--line)}
+.box{padding:10px 14px;border-radius:6px;margin:12px 0;border-left:5px solid}.ok{background:var(--ok);border-color:var(--okb)}.wa{background:var(--wa);border-color:var(--wab)}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:15px}td,th{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}th{background:var(--card)}
+pre{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px 70px 10px 10px;overflow:auto;position:relative;white-space:pre-wrap;font-size:14px}
+pre button{position:absolute;right:6px;top:6px;font-size:12px;padding:3px 9px;cursor:pointer}
+code{background:var(--card);padding:0 4px;border-radius:3px;font-size:14px}.mut{color:var(--mut)}
+</style></head><body>
+<h1>Git steps: share pose2sim_web with your friend</h1>
+<p class="mut">You run every command yourself. Claude will not run git changes unless you say so. Checked on 18 Oct 2026 with read-only commands.</p>
+
+<h2>1. Where things are now</h2>
+<table>
+<tr><th>Item</th><th>Status</th></tr>
+<tr><td>Local branch you are on</td><td><b>main</b> (the history shows you switched from squat-error-study to main after the revert)</td></tr>
+<tr><td>local main vs GitHub main</td><td>same commit <code>9fb9858</code>: nothing to pull, nothing to push</td></tr>
+<tr><td>local squat-error-study vs GitHub</td><td>same commit <code>a884be7</code> (my earlier push was removed). Nothing to pull or push</td></tr>
+<tr><td><code>pose2sim_web/</code> (website, guides)</td><td>only on your computer, <b>not in git</b> (untracked). Its big <code>data\</code> folder is ignored automatically</td></tr>
+<tr><td><code>.gitignore</code> (top folder)</td><td>modified (3 lines added by me earlier). It is not needed, because <code>pose2sim_web\.gitignore</code> already ignores <code>data\</code>. You can undo it (step 3).</td></tr>
+<tr><td><code>squat_error_study/</code></td><td>the study code exists only on branch <b>squat-error-study</b>. On main you see only leftover untracked data. Nothing is lost.</td></tr>
+</table>
+<div class="ok box"><b>Should I pull?</b> No. Nothing new on GitHub for these two branches. Step 2 lets you double-check.</div>
+
+<h2>2. Check yourself (safe, changes nothing)</h2>
+<p>Open the repo folder in VS Code (File -> Open Folder), then Terminal -> New Terminal (or use cmd/PowerShell in the folder).</p>
+<pre><button onclick="c(this)">Copy</button>cd "C:\Current_Mini_Project_Working\MarkerLess-Squat-Analysis-and-Real-Time-Posture-Correction-for-Injury-Prevention-using-Deep-Learning"
+git branch --show-current
+git fetch origin
+git status -sb
+git log --oneline -3 origin/squat-error-study</pre>
+<p>Meaning: <code>git fetch</code> only downloads news (safe). In <code>status -sb</code>, if the first line ends with <code>[behind N]</code> then there is something to pull; if there is no brackets, you are up to date.</p>
+
+<h2>3. Go to the right branch</h2>
+<p>I suggest putting pose2sim_web on <b>squat-error-study</b> (where your study and your friend's work are). The alternative is a new branch (step 3B).</p>
+<pre><button onclick="c(this)">Copy</button>git switch squat-error-study</pre>
+<div class="wa box">If git answers "untracked working tree files would be overwritten" or "local changes would be overwritten": <b>stop</b>, do not use --force, copy the message and ask Claude. (It would be the modified .gitignore. In that case first run <code>git restore .gitignore</code>.)</div>
+<p>Optional: throw away my extra .gitignore lines (not needed):</p>
+<pre><button onclick="c(this)">Copy</button>git restore .gitignore</pre>
+<p><b>3B (alternative):</b> a separate branch from main, so nothing touches the study branch:</p>
+<pre><button onclick="c(this)">Copy</button>git switch -c pose2sim-web</pre>
+
+<h2>4. Add only pose2sim_web (not everything)</h2>
+<pre><button onclick="c(this)">Copy</button>git add pose2sim_web
+git status -sb</pre>
+<p>Check the list. You should see only: <code>pose2sim_web/.gitignore, app.py, postprocess.py, start.ps1, static/index.html, PLAN.html, NEXT_2_HOURS.html, GUIDE_KINOVEA_AND_ERROR.html, DO_THIS_STEP_BY_STEP.html, RESULTS_AND_REPORT.html, REPORT_REFERENCE.html, GIT_STEPS.html</code>. If you see <code>data/</code>, videos, <code>.kva</code> or <code>__pycache__</code>: undo with <code>git restore --staged pose2sim_web</code> and ask.</p>
+<div class="wa box"><b>Do not use <code>git add .</code></b> : it would also stage the untracked study files (<code>squat_error_study/...</code>). Decide about those separately.</div>
+<p>Do you want to share the report evidence (13 Kinovea images, CSV)? They are inside the ignored <code>data\</code> folder, so they are not pushed. Share them by Drive/WhatsApp/zip, or ask Claude to copy the small files to a docs folder that you then add.</p>
+
+<h2>5. Commit and push</h2>
+<pre><button onclick="c(this)">Copy</button>git commit -m "Add Pose2Sim Web: angle viewer, Kinovea comparison, guides"
+git push origin squat-error-study</pre>
+<p>(If you used 3B, push with <code>git push -u origin pose2sim-web</code>.) The commit message can be anything clear.</p>
+<p>VS Code way: left bar -> <b>Source Control</b> (branch icon). Click the <b>+</b> next to the files under pose2sim_web (or hover the folder and click +), type a message, click <b>Commit</b>, then <b>Sync Changes / Publish Branch</b>.</p>
+
+<h2>6. Your friend gets it</h2>
+<pre><button onclick="c(this)">Copy</button>git fetch origin
+git switch squat-error-study
+git pull</pre>
+<p>Then open the HTML files in <code>pose2sim_web</code> in a browser. To run the website they need Pose2Sim and Flask in <code>C:\Pose2SimVenv</code> and then <code>start.ps1</code>. They will not have your run data.</p>
+
+<h2>If something goes wrong</h2>
+<ul>
+<li>Push says "rejected": someone pushed first. Run <code>git pull</code>, then push again. Never use <code>--force</code> without asking.</li>
+<li>Pushed a wrong file: tell Claude, do not try to delete history alone.</li>
+</ul>
+<script>function c(b){var t=b.parentNode.textContent.replace('Copy','').trim();navigator.clipboard.writeText(t);b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1200)}</script>
+</body></html>

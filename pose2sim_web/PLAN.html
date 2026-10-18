@@ -1,0 +1,216 @@
+<title>Pose2Sim Web Plan</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column. What went wrong, then 6 numbered steps, each with copy blocks and what to expect. */
+:root {
+  --bg: #f1f4f6; --surface: #ffffff; --ink: #14202b; --muted: #55656f; --line: #d7dfe5;
+  --accent: #0b7c82; --accent-soft: #ddf0f0; --warn: #9a5200; --warn-soft: #fbecd3; --good: #1d7a3e; --bad: #b3261e;
+  --code-bg: #0f1b24; --code-ink: #d6e7ee;
+  --display: "Schibsted Grotesk", "Segoe UI", system-ui, sans-serif; --mono: "IBM Plex Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d151b; --surface: #15212a; --ink: #e5edf2; --muted: #94a6b3; --line: #27353f;
+  --accent: #52c5cb; --accent-soft: #12383b; --warn: #f0a54a; --warn-soft: #382811; --good: #5fcf86; --bad: #ff8a80; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0d151b; --surface: #15212a; --ink: #e5edf2; --muted: #94a6b3; --line: #27353f;
+  --accent: #52c5cb; --accent-soft: #12383b; --warn: #f0a54a; --warn-soft: #382811; --good: #5fcf86; --bad: #ff8a80; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.6 var(--display); padding-block: 28px 80px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+h1 { font-size: clamp(2rem, 5vw, 2.7rem); line-height: 1.05; margin: 0; font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: 1.25rem; margin: 0; font-weight: 800; }
+h3 { font-size: 1rem; margin: 0; font-weight: 600; }
+p { margin: 0; max-width: 70ch; }
+.muted { color: var(--muted); }
+code { font-family: var(--mono); font-size: .88em; }
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.chip { display: inline-block; font: 500 .75rem/1 var(--mono); padding: 5px 8px; border-radius: 4px; white-space: nowrap; }
+.chip.pc { background: var(--accent-soft); color: var(--accent); } .chip.you { background: var(--warn-soft); color: var(--warn); }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+.head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.head h2 { flex: 1 1 260px; }
+.sub { display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid var(--line); }
+ul, ol { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 6px; max-width: 72ch; }
+.see { border-left: 3px solid var(--good); padding: 2px 0 2px 12px; font-size: .93rem; max-width: 72ch; }
+.see b { color: var(--good); }
+.warn { border-left: 3px solid var(--warn); padding: 2px 0 2px 12px; font-size: .93rem; max-width: 72ch; }
+.warn b { color: var(--warn); }
+.cmd { background: var(--code-bg); color: var(--code-ink); border-radius: 6px; }
+.cmd pre { margin: 0; padding: 10px 14px 14px; overflow-x: auto; font: 400 .82rem/1.55 var(--mono); }
+.cmd-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 8px 0 14px; font: .72rem var(--mono); color: #8fa6b3; }
+.cmd button, .cp { font: 600 .8rem var(--display); background: transparent; color: var(--code-ink); border: 1px solid #3b5666; border-radius: 5px; padding: 5px 11px; cursor: pointer; }
+.cp { color: var(--accent); border-color: var(--accent); }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 500 .72rem var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.scroll { overflow-x: auto; }
+.tree { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; overflow-x: auto; font: .82rem/1.6 var(--mono); white-space: pre; }
+.tick { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.tick input { width: 18px; height: 18px; margin-top: 5px; accent-color: var(--accent); flex: none; }
+.tick:has(input:checked) span { color: var(--muted); text-decoration: line-through; }
+</style>
+
+<div class="wrap">
+<header style="display:flex;flex-direction:column;gap:12px">
+  <span class="chip pc" style="align-self:flex-start">Squat study · plan of 18 Oct</span>
+  <h1>Pose2Sim Web Plan</h1>
+  <p class="muted">A new local website, <b>Pose2Sim Web</b>, replaces the old plan and the old Kinovea page. You attach the videos, it processes them, saves everything, and shows the angles as a graph. This page says exactly what to do.</p>
+</header>
+
+<section class="box">
+  <h2>What went wrong, and what changed</h2>
+  <ul>
+    <li><b>The error was not a bug.</b> Your log shows sync, calibration (RMS 0.35 px on both cameras), board detection and video cutting all worked. It stopped at the pose step because the PC had <b>no internet</b> when the pose models had to be downloaded (<code>getaddrinfo failed</code> = the address could not be looked up). The model folder on this PC is still empty, so no run could have passed that step. Both videos failed the same way.</li>
+    <li><b>The pose models are now handled in the website.</b> A "System check" page shows whether internet and models are ready and has a Download button. The New run page warns you if the models are missing. This is the real fix.</li>
+    <li><b>I rebuilt the website, but kept the processing engine</b> (<code>two_view\run_pose2sim.py</code>: clap sync, calibration, board detection, RTMPose, triangulation). It is your tested code and your log shows it works. Rewriting it would only add risk. The new site has: a clean upload form, saved runs, a graph viewer with left and right checkboxes, and a Kinovea comparison tab. It has <b>no rep detection</b>.</li>
+    <li><b>Removed:</b> the whole <code>validation</code> folder from yesterday (old Kinovea guide, checklist, report, and the two Python scripts). The new website contains everything they did.</li>
+    <li><b>Also lighter:</b> the log showed the run used "performance" quality on a CPU. The new default is <b>balanced</b>, which is much faster here.</li>
+  </ul>
+</section>
+
+<section class="box">
+  <div class="head"><span class="chip you">5 min</span><h2>Step 1 · Start the website</h2></div>
+  <p>Open <b>PowerShell</b> (Start menu → type PowerShell → Enter), paste this, press Enter. <b>Keep the window open</b> while you use the site.</p>
+  <div class="cmd"><div class="cmd-top"><span>PowerShell</span><button type="button" data-copy="c1">Copy</button></div>
+<pre id="c1">cd "C:\Current_Mini_Project_Working\MarkerLess-Squat-Analysis-and-Real-Time-Posture-Correction-for-Injury-Prevention-using-Deep-Learning"
+powershell -ExecutionPolicy Bypass -File pose2sim_web\start.ps1</pre></div>
+  <p class="see"><b>You should see:</b> "Pose2Sim Web at http://127.0.0.1:5100" and your browser opening that page. If not, open <b>http://127.0.0.1:5100</b> yourself. The site runs only on your PC.</p>
+</section>
+
+<section class="box">
+  <div class="head"><span class="chip you">5–15 min, once · needs internet</span><h2>Step 2 · Download the pose models</h2></div>
+  <ol>
+    <li>Make sure the internet is on and will not drop (this is what failed before).</li>
+    <li>In the left bar click <b>System check</b>. "Pose2Sim" should say installed and "Internet" connected.</li>
+    <li>In the Pose models table press <b>Download</b> next to <b>balanced</b>. A log appears; wait until it says <b>downloaded</b>.</li>
+  </ol>
+  <p class="warn"><b>Disk space:</b> this PC had only about 5.7 GB free when I checked. The models take a few hundred MB, and each run saves its processed videos (hundreds of MB). Free some space if the System check shows less than about 3 GB.</p>
+</section>
+
+<section class="box">
+  <div class="head"><span class="chip you">5 min of you, then the computer works</span><h2>Step 3 · Process the videos</h2></div>
+  <p>Click <b>+ New run</b>. Use these values. Each path box accepts a full file path, which avoids uploading big files.</p>
+  <div class="scroll"><table>
+    <tr><th>Form section</th><th>What to set</th></tr>
+    <tr><td>Run name</td><td><code>video1</code> (second run: <code>video2</code>)</td></tr>
+    <tr><td>1 · Intrinsic</td><td>Choose <b>Reuse intrinsics I already calculated</b> and paste the file below. It was computed in your failed run from the same intrinsic videos (so you skip about 5 minutes). Corners <code>6,7</code>, square <code>41</code>.</td></tr>
+    <tr><td>2 · Extrinsic</td><td><b>The board is in the squat videos</b>. Corners <code>6,7</code>, square <code>41</code>, board position <b>Flat on the floor</b>.</td></tr>
+    <tr><td>3 · Squat videos</td><td>Paste the two paths below. Claps: <b>One clap</b>. Clap search window <code>90</code>.</td></tr>
+    <tr><td>4 · Processing</td><td>Quality <b>balanced</b>, run on <b>CPU</b> (this PC has no NVIDIA GPU).</td></tr>
+  </table></div>
+  <div class="scroll"><table>
+    <tr><th>Field</th><th>Paste this</th><th></th></tr>
+    <tr><td>Intrinsics calibration.toml</td><td><code id="t0">C:\Current_Mini_Project_Working\kinovea_validation\preprocessed_data\_calibration\intrinsic\calibration.toml</code></td><td><button type="button" class="cp" data-copy="t0">Copy</button></td></tr>
+    <tr><td>Video 1 · side</td><td><code id="t1">C:\Current_Mini_Project_Working\dataset_17_10\side\DJI_20261017181325_0003_D.MP4</code></td><td><button type="button" class="cp" data-copy="t1">Copy</button></td></tr>
+    <tr><td>Video 1 · front</td><td><code id="t2">C:\Current_Mini_Project_Working\dataset_17_10\front\DJI_20261017181534_0165_D.MP4</code></td><td><button type="button" class="cp" data-copy="t2">Copy</button></td></tr>
+    <tr><td>Video 2 · side</td><td><code id="t3">C:\Current_Mini_Project_Working\dataset_17_10\side\DJI_20261017181715_0004_D.MP4</code></td><td><button type="button" class="cp" data-copy="t3">Copy</button></td></tr>
+    <tr><td>Video 2 · front</td><td><code id="t4">C:\Current_Mini_Project_Working\dataset_17_10\front\DJI_20261017181923_0166_D.MP4</code></td><td><button type="button" class="cp" data-copy="t4">Copy</button></td></tr>
+    <tr><td>(if you prefer intrinsic videos)</td><td>side <code>…\side\DJI_20261017172559_0002_D.MP4</code>, front <code>…\front\DJI_20261017172650_0164_D.MP4</code></td><td></td></tr>
+  </table></div>
+  <p>Press <b>Process videos</b>. You land on the run page: a stage list (setup, sync, calibration, extract, pose, triangulation, angles, packaging), a progress bar for the slow pose step, and the live log. Then start video 2 the same way (you can queue it right away).</p>
+  <p class="warn"><b>How long?</b> I could not measure this: the pose step on a CPU is the slow part and depends on your PC. Your failed runs took 7–8 minutes before they reached the pose step. Expect something like 10–40 minutes per video with "balanced". Do Step 5 on video 1 once it finishes while video 2 runs.</p>
+  <p class="see"><b>If it fails:</b> the run page shows what to do. A "No internet" message means go back to Step 2. For anything else, copy the last 15 lines of the log and send them to me.</p>
+</section>
+
+<section class="box">
+  <div class="head"><span class="chip pc">when a run is done</span><h2>Step 4 · Look at the angles</h2></div>
+  <ol>
+    <li>Open the run, click the tab <b>Angles</b>. The synced front and side videos (with the skeleton) are on top; the graph is below.</li>
+    <li><b>Tick the angles</b> in the table. There is one column for <b>Left</b> (solid line) and one for <b>Right</b> (dashed). Clicking a name ticks both sides.</li>
+    <li><b>Move the mouse over the graph</b> (or touch it): a line follows you and a box shows the value of every ticked angle, the frame number, and the <b>side-video time</b> (the time Kinovea shows). Click to jump the videos to that moment. When you play the video, the line moves with it.</li>
+    <li>Use "From / to (s)" or "Zoom ±5 s around the cursor" to look closer. "Side-view plane" is the angle as a side camera sees it; "full 3D" is the true 3D angle.</li>
+  </ol>
+  <div class="scroll"><table>
+    <tr><th>Group</th><th>Angles</th></tr>
+    <tr><td>Joint angles (3 points)</td><td>knee, hip, shoulder, elbow, ankle, left and right, as the inside angle (180° = straight). Plus trunk lean from vertical. These are what Kinovea can measure.</td></tr>
+    <tr><td>Pipeline angles</td><td>the ones your classifier used: knee flexion, hip angle, hip flexion, knee valgus, ankle dorsiflexion proxy (left and right), trunk flexion, head forward angle, squat depth, lumbar proxy.</td></tr>
+  </table></div>
+  <p class="muted">Left and Right are the pose model's own labels (the person's left and right). The wrist angle does not exist: the model has no hand point.</p>
+</section>
+
+<section class="box">
+  <div class="head"><span class="chip you">35 min per video</span><h2>Step 5 · Measure in Kinovea</h2></div>
+  <div class="scroll"><table>
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Which video</td><td>The <b>original side video</b> (<code>DJI_…0003_D.MP4</code> for video 1), not the small skeleton copy.</td></tr>
+    <tr><td>Where in the video</td><td>Only in the <b>still holds</b>, in the middle of each hold. In a hold you do not move, so a small timing difference cannot change the angle.</td></tr>
+    <tr><td>How many moments</td><td><b>9 per video</b>: 1 standing at the start, 6 squat holds spread through the video, 2 later standing holds. (Fewer than 8 is too few. If you have time, do both videos.)</td></tr>
+    <tr><td>How many angles per moment</td><td><b>4</b>: knee, hip, shoulder, elbow, on the side with the tapes (right). Trunk lean is an optional 5th. That is about 36 numbers per video.</td></tr>
+    <tr><td>Which times</td><td>Do not hunt for them: in the run, open the tab <b>Compare with Kinovea</b> and press <b>Suggest moments</b>. It finds the still holds and puts the 9 Kinovea times in the sheet.</td></tr>
+  </table></div>
+  <ol>
+    <li>Open the original side video in Kinovea (free from kinovea.org). Jump to the first time from the sheet (the time shows under the video; use the arrow keys to step by one frame).</li>
+    <li>Pick the <b>Angle</b> tool and click three tapes in order. The <b>middle joint is the corner</b>: knee = hip → <b>knee</b> → ankle; hip = shoulder → <b>hip</b> → knee; shoulder = hip → <b>shoulder</b> → elbow; elbow = shoulder → <b>elbow</b> → wrist. Zoom in to click the centre of each tape. Kinovea writes the angle value on the video.</li>
+    <li>Sanity check each number: a straight standing leg is about 170–180°, a deep squat knee about 60–100°. If Kinovea shows the outside angle (for example 190° for a leg you expect at 170°), type 360 minus that number.</li>
+    <li><b>How to note it:</b> in the sheet, type the 4 angles on the same row as the time. One row = one moment. Format: the time as Kinovea shows it (<code>0:12.50</code> or in seconds) and the angle numbers in degrees (<code>172.1</code>).</li>
+    <li><b>Save in Kinovea:</b> File → Save (a <code>.kva</code> file, your drawn angles) next to the video, named <code>video1_side.kva</code>. The sheet itself is saved by the website automatically.</li>
+  </ol>
+  <p class="warn"><b>Kinovea menus:</b> I wrote these steps from memory and could not check them in your version. If a menu is named differently, tell me.</p>
+</section>
+
+<section class="box">
+  <div class="head"><span class="chip pc">10 min</span><h2>Step 6 · Get the final error</h2></div>
+  <ol>
+    <li>Stay on the tab <b>Compare with Kinovea</b>. The result appears under the sheet as you type, for each joint.</li>
+    <li><b>bias</b> = the constant error (pipeline minus Kinovea, in degrees). <b>95% low / high</b> = the ± range: about 95 % of the differences fall between them. <b>MAE</b> = the average size of the error. A plot shows each point.</li>
+    <li>Press <b>Copy result text</b> and paste it into your report notes. Example of how to read it (not your result): "knee bias +2.1°, limits −3.9° to +8.1°" means the pipeline reads 2.1° higher on average and 95 % of the differences are within −3.9° to +8.1°.</li>
+    <li>The tab also compares the pipeline's own columns (<code>knee_flexion</code>, <code>hip_angle</code>) with Kinovea, which is the number your classifier used.</li>
+  </ol>
+  <p class="muted"><b>How to word it:</b> a pilot with one person and about 18 moments, side view only. Kinovea by hand is itself good to about 1–2°. Tape on the skin and the model's joint point are not at the same spot, which is part of the measured error. It does not validate the front-view knee valgus and varus angles.</p>
+</section>
+
+<section class="box">
+  <h2>Where everything is saved</h2>
+  <p>Every run has its own folder inside <code>pose2sim_web\data\</code>. Nothing is overwritten and your original videos are never touched.</p>
+<div class="tree">pose2sim_web\data\&lt;run name&gt;\
+├─ settings.json         every form value you used
+├─ run.log               the full log of the run
+├─ results\              points3d.trc (3D joints), advancedangles.csv, calibration.toml,
+│                        board pictures, results.json, small playable front.mp4 / side.mp4
+├─ processed_videos\     the synced front and side videos (and pose overlays)
+├─ angles_all.csv        every angle, left and right, one row per frame
+├─ angles_meta.json      names used by the viewer
+├─ kinovea\              sheet.json, result.txt (the error table), pairs.csv (every pair)
+└─ input\                only files you uploaded (pasted paths are not copied)</div>
+</section>
+
+<section class="box">
+  <h2>Time, in total</h2>
+  <div class="scroll"><table>
+    <tr><th>What</th><th>Your time</th><th>Computer</th></tr>
+    <tr><td>Step 1 start</td><td>5 min</td><td></td></tr>
+    <tr><td>Step 2 models</td><td>2 min</td><td>5–15 min download</td></tr>
+    <tr><td>Step 3, two runs</td><td>10 min</td><td>about 20–80 min, unmeasured</td></tr>
+    <tr><td>Step 5 Kinovea</td><td>35 min per video</td><td></td></tr>
+    <tr><td>Step 6 error</td><td>10 min</td><td></td></tr>
+  </table></div>
+  <p class="muted">If you are short on time: do Steps 1 to 3 for video 1, measure only video 1 (9 moments, knee and hip first), and read the result. That alone gives a first error range.</p>
+</section>
+
+<section class="box">
+  <h2>What was tested, and what was not</h2>
+  <ul>
+    <li><b>Tested here:</b> the website opened in Chrome with demo data (an older recording): the form, system check, progress page, the angle graph with left/right ticks, the hover values and the Kinovea tab. The saving of runs, the validation messages, the stage tracking and the failure handling were tested with a stand-in for the engine. The angle maths matches your pipeline (the knee angle plus the pipeline's knee flexion is exactly 180°). The Kinovea error calculation recovered a test offset of 3°.</li>
+    <li><b>Not tested:</b> a real run of the processing engine on your videos (it needs the models and a long CPU run, so you do that), playing the processed videos in the viewer, uploading very large files through the browser, and the "separate extrinsic videos" option (it chains two engine runs).</li>
+    <li>If something looks wrong or fails, send me what you see or the last 15 lines of the log.</li>
+  </ul>
+</section>
+</div>
+
+<script>
+document.querySelectorAll("[data-copy]").forEach(function (b) {
+  b.addEventListener("click", function () {
+    var text = document.getElementById(b.getAttribute("data-copy")).textContent;
+    var ok = function () { var o = b.textContent; b.textContent = "Copied"; setTimeout(function () { b.textContent = o; }, 1300); };
+    var fb = function () {
+      var ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); ok(); } catch (e) { b.textContent = "Select by hand"; }
+      document.body.removeChild(ta);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, fb); else fb();
+  });
+});
+</script>

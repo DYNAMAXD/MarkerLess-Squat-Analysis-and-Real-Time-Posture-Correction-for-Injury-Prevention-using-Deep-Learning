@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Report reference: error numbers and wording</title>
+<style>
+:root{--bg:#fff;--ink:#1b1f24;--mut:#5b6470;--line:#d8dbe0;--card:#f6f7f9;--ok:#e6f4ea;--okb:#1e8e3e;--wa:#fef7e0;--wab:#f9ab00;--bad:#fce8e6;--badb:#d93025}
+@media(prefers-color-scheme:dark){:root{--bg:#14161a;--ink:#e6e8eb;--mut:#9aa3ad;--line:#333;--card:#1e2127;--ok:#16301f;--wa:#38300f;--bad:#3b1a18}}
+body{font:16px/1.55 system-ui,Segoe UI,sans-serif;max-width:860px;margin:0 auto;padding:20px 16px 70px;color:var(--ink);background:var(--bg)}
+h1{font-size:24px}h2{font-size:19px;margin-top:30px;padding-top:12px;border-top:2px solid var(--line)}
+.box{padding:10px 14px;border-radius:6px;margin:12px 0;border-left:5px solid}.ok{background:var(--ok);border-color:var(--okb)}.wa{background:var(--wa);border-color:var(--wab)}.bad{background:var(--bad);border-color:var(--badb)}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:15px}td,th{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}th{background:var(--card)}
+pre{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px 70px 10px 10px;overflow:auto;position:relative;white-space:pre-wrap;font-size:14px}
+pre button{position:absolute;right:6px;top:6px;font-size:12px;padding:3px 9px;cursor:pointer}
+code{background:var(--card);padding:0 4px;border-radius:3px;font-size:14px}.mut{color:var(--mut)}
+</style></head><body>
+
+<h1>Report reference: the numbers and the safe wording</h1>
+<p class="mut">One-page cheat sheet for writing the report and answering questions. Source: run squat_test_1018-154709, one participant, 9 still postures, pipeline (Pose2Sim, full 3D angles) minus manual Kinovea. Full details: <code>RESULTS_AND_REPORT.html</code>.</p>
+
+<h2>1. The numbers to quote (use exactly these)</h2>
+<table>
+<tr><th></th><th>Knee</th><th>Hip</th></tr>
+<tr><td>Average error (MAE)</td><td><b>4.9°</b></td><td><b>9.5°</b></td></tr>
+<tr><td>Bias (computer minus Kinovea)</td><td>-4.9° (reads lower)</td><td>-6.3° (reads lower)</td></tr>
+<tr><td>SD of the differences</td><td>3.9°</td><td>8.4°</td></tr>
+<tr><td>95 % limits of agreement</td><td>-12.5° to +2.8°</td><td>-22.8° to +10.2°</td></tr>
+<tr><td>Standing (3 moments), mean difference</td><td>-0.2°</td><td>+4.8°</td></tr>
+<tr><td>Squat (6 frames, 4 holds), mean difference</td><td>-7.2°</td><td>-11.9°</td></tr>
+<tr><td>n</td><td colspan="2">9 postures (3 standing, 6 squat frames from 4 holds), right side, one participant, one trial</td></tr>
+</table>
+
+<h2>2. Short answers (copy)</h2>
+<h3>One-line answer</h3>
+<pre><button onclick="c(this)">Copy</button>In a one-person pilot, the knee angle was off by about 5 degrees on average and the hip angle by about 10 degrees, compared with manual Kinovea measurements on still postures.</pre>
+<h3>With the error range</h3>
+<pre><button onclick="c(this)">Copy</button>Knee: about 5 degrees on average (MAE 4.9), with 95% of differences between -12.5 and +2.8 degrees. Hip: about 10 degrees on average (MAE 9.5), with 95% of differences between -22.8 and +10.2 degrees, and an error that depends on posture (about +5 degrees standing, -12 degrees in the squat). One participant, nine still postures.</pre>
+<div class="wa box">Say "on average" every time. Do not say "±5°" or "±10°": that sounds like a promise that the error is never bigger (the knee was off by 11° once).</div>
+
+<h2>3. Always attach these three things</h2>
+<ol><li>"in a pilot with <b>one person</b>"</li><li>"on <b>still postures</b>, not during fast movement"</li><li>"compared with a <b>manual Kinovea measurement</b>, not a lab system"</li></ol>
+
+<h2>4. Words</h2>
+<table>
+<tr><th>Write</th><th>Do not write</th></tr>
+<tr><td>agreement with a manual reference (Kinovea)</td><td>ground truth, accuracy, validated system</td></tr>
+<tr><td>pilot, indicates the order of magnitude</td><td>the dataset has an error of ±X°</td></tr>
+<tr><td>knee and hip angles, side view, static postures</td><td>anything about valgus, ankle, trunk lean, or movement (not measured)</td></tr>
+</table>
+
+<h2>5. Facts to disclose (put in Methods or Limitations)</h2>
+<ul>
+<li><b>Main comparison was changed after seeing the data.</b> Planned main = "side-view plane" angle. It showed a bias of about +11° (my own website's projection step, not part of the dataset pipeline), so the main result is the full-3D angle, which is what the dataset used (knee flexion = 180 minus the 3D knee angle). The plane results go in an appendix.</li>
+<li>Diagnostic: the 2D angle measured on the side-camera image differed from Kinovea by -4.0° (knee) and -3.5° (hip), similar to the 3D knee value, so the 3D reconstruction is consistent with the 2D keypoints.</li>
+<li>Hip error depends on posture (+4.8° standing, -11.9° squat); likely tape position vs the model's hip joint centre (not tested).</li>
+<li>Reprojection error 3.8 px (about 8.7 mm); lens distortion not modelled; no limb-swap handling; cameras 2.9 m apart, about 89°; 29.97 fps; 6 Hz Butterworth filter; intrinsic RMS about 0.35 px.</li>
+<li>One observer, no repeat measurement (the Kinovea reference error is unknown). Several squat frames come from the same hold (not independent).</li>
+<li>Do not quote "r = 1.00" (it only reflects the large difference between standing and squat angles).</li>
+</ul>
+
+<h2>6. Likely questions</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>How accurate is it?</td><td>About 5° (knee) and 10° (hip) on average in this pilot. I report it as agreement with a manual reference.</td></tr>
+<tr><td>Does it apply to your whole dataset?</td><td>Same set-up and software settings, so it indicates the size of the error. It is not proven for every person; more participants are needed.</td></tr>
+<tr><td>Why only one person?</td><td>Time-limited pilot; next step is more people and a second observer.</td></tr>
+<tr><td>Why is the hip worse?</td><td>The hip tape sits on the skin, the model's hip is a joint centre inside the pelvis; the offset changes with posture.</td></tr>
+<tr><td>Why did you change the main result?</td><td>The plane projection was my own extra step with a +11° offset not present in the 2D detections or the 3D reconstruction. The 3D angle is what the dataset used. I disclose the change.</td></tr>
+<tr><td>Is 5° good enough for the classifier?</td><td>Compare with the angle differences between correct and incorrect squats in your data before answering, and quote them. (Not yet checked.)</td></tr>
+<tr><td>Is it as good as other systems?</td><td>Not compared with published studies yet; do a literature check before saying so.</td></tr>
+</table>
+
+<h2>7. Where the proof is</h2>
+<table>
+<tr><th>Item</th><th>Path (under <code>pose2sim_web\data\squat_test_1018-154709\</code>)</th></tr>
+<tr><td>Kinovea pictures, drawings, result, pairs CSV</td><td><code>report_evidence\</code></td></tr>
+<tr><td>Website's saved comparison</td><td><code>kinovea\</code> (sheet.json, pairs.csv, result.txt)</td></tr>
+<tr><td>Pipeline angles, every frame</td><td><code>angles_all.csv</code></td></tr>
+<tr><td>Log, reprojection error, calibration</td><td><code>results\log.txt</code>, <code>results\calibration.toml</code></td></tr>
+<tr><td>Full write-up and paste-able paragraphs</td><td><code>pose2sim_web\RESULTS_AND_REPORT.html</code></td></tr>
+</table>
+
+<script>function c(b){var t=b.parentNode.textContent.replace('Copy','').trim();navigator.clipboard.writeText(t);b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1200)}</script>
+</body></html>

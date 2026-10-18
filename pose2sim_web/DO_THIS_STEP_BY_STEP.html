@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Do this, step by step</title>
+<style>
+:root{--bg:#fff;--ink:#1b1f24;--mut:#5b6470;--line:#d8dbe0;--card:#f6f7f9;--acc:#174ea6;--ok:#e6f4ea;--okb:#1e8e3e;--wa:#fef7e0;--wab:#f9ab00}
+@media(prefers-color-scheme:dark){:root{--bg:#14161a;--ink:#e6e8eb;--mut:#9aa3ad;--line:#333;--card:#1e2127;--acc:#9ec1ff;--ok:#16301f;--wa:#38300f}}
+body{font:17px/1.6 system-ui,Segoe UI,sans-serif;max-width:820px;margin:0 auto;padding:20px 16px 90px;color:var(--ink);background:var(--bg)}
+h1{font-size:26px}h2{font-size:21px;margin-top:38px;padding:14px 0 0;border-top:3px solid var(--line)}
+.n{display:inline-block;background:var(--acc);color:var(--bg);border-radius:50%;width:30px;height:30px;text-align:center;line-height:30px;margin-right:8px;font-size:17px}
+.t{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:0 9px;font-size:13px;margin-left:6px;font-weight:400;color:var(--acc)}
+.box{padding:10px 14px;border-radius:6px;margin:12px 0;border-left:5px solid}.ok{background:var(--ok);border-color:var(--okb)}.wa{background:var(--wa);border-color:var(--wab)}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:16px}td,th{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}th{background:var(--card)}
+pre{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px 70px 10px 10px;overflow:auto;position:relative;white-space:pre-wrap;font-size:14px}
+pre button{position:absolute;right:6px;top:6px;font-size:12px;padding:3px 9px;cursor:pointer}
+code{background:var(--card);padding:0 4px;border-radius:3px;font-size:15px}
+label{display:block;margin:6px 0}svg{max-width:100%;height:auto}.mut{color:var(--mut)}
+</style></head><body>
+
+<h1>Do this, step by step</h1>
+<p class="mut">Goal: measure angles by hand in Kinovea at 9 moments, let the website compare them with the computer's angles, save everything, and write the result for ma'am and the paper. Time: about 1 h 30 min.</p>
+
+<div class="ok box"><b>The big idea (kid version).</b> The computer looked at your two videos and calculated how bent your knee and hip were. Now <b>you</b> measure the same bend by hand with a digital protractor (Kinovea) on your tape stickers. If your number and the computer's number are close, the computer is accurate. The "error" is just how far apart they are.</div>
+
+<h2><span class="n">1</span>Start the website <span class="t">2 min</span></h2>
+<p>Open PowerShell and paste this. Keep the window open.</p>
+<pre><button onclick="c(this)">Copy</button>powershell -ExecutionPolicy Bypass -File "C:\Current_Mini_Project_Working\MarkerLess-Squat-Analysis-and-Real-Time-Posture-Correction-for-Injury-Prevention-using-Deep-Learning\pose2sim_web\start.ps1"</pre>
+<p>Your browser opens. Click the run <b>squat_test_1018-154709</b> on the left. Then click the tab <b>Compare with Kinovea</b>. Set "Taped side" = <b>right</b>. Keep "Kinovea video starts at" = <b>0</b>. Click <b>Suggest moments</b>. The time column fills itself.</p>
+
+<h2><span class="n">2</span>Open the video in Kinovea <span class="t">2 min</span></h2>
+<p>Start Kinovea. Drag this file into the Kinovea window (or use its file list on the left):</p>
+<pre><button onclick="c(this)">Copy</button>C:\Current_Mini_Project_Working\MarkerLess-Squat-Analysis-and-Real-Time-Posture-Correction-for-Injury-Prevention-using-Deep-Learning\pose2sim_web\data\squat_test_1018-154709\processed_videos\side_synced.mp4</pre>
+<div class="wa box">Open <b>only this</b> file. Not the original camera file. This one starts exactly where the computer's frame 0 starts, so the times match.</div>
+
+<h2><span class="n">3</span>Know your tapes <span class="t">1 min</span></h2>
+<p>You see yourself from the right side. The tape stickers are <b>shoulder, elbow, wrist, hip, knee, ankle (outer)</b>. For this job you need only <b>4 of them: shoulder, hip, knee, ankle</b>. Elbow and wrist are not used (arms are not part of a squat).</p>
+<svg viewBox="0 0 440 280" role="img" aria-label="Right side view: shoulder, hip, knee, ankle tapes with the three angles">
+ <line x1="8" y1="262" x2="432" y2="262" stroke="#888" stroke-width="2"/>
+ <line x1="180" y1="20" x2="180" y2="140" stroke="#999" stroke-dasharray="5 5"/>
+ <text x="186" y="32" font-size="13" fill="currentColor">straight-up line</text>
+ <line x1="140" y1="50" x2="180" y2="125" stroke="#1a73e8" stroke-width="6" stroke-linecap="round"/>
+ <line x1="180" y1="125" x2="270" y2="160" stroke="#1a73e8" stroke-width="6" stroke-linecap="round"/>
+ <line x1="270" y1="160" x2="235" y2="250" stroke="#1a73e8" stroke-width="6" stroke-linecap="round"/>
+ <circle cx="140" cy="50" r="8" fill="#d93025"/><circle cx="180" cy="125" r="8" fill="#d93025"/><circle cx="270" cy="160" r="8" fill="#d93025"/><circle cx="235" cy="250" r="8" fill="#d93025"/>
+ <text x="40" y="48" font-size="14" fill="currentColor">1 shoulder</text>
+ <text x="100" y="140" font-size="14" fill="currentColor">2 hip</text>
+ <text x="282" y="160" font-size="14" fill="currentColor">3 knee</text>
+ <text x="250" y="256" font-size="14" fill="currentColor">4 ankle</text>
+ <text x="196" y="150" font-size="13" font-weight="700" fill="#188038">HIP angle</text>
+ <text x="270" y="190" font-size="13" font-weight="700" fill="#188038">KNEE angle</text>
+ <text x="118" y="100" font-size="13" font-weight="700" fill="#188038">TRUNK LEAN</text>
+</svg>
+
+<h2><span class="n">4</span>The three angles, one by one <span class="t">read once</span></h2>
+<p>In Kinovea use the <b>Angle tool</b> (toolbar icon with two lines meeting at a corner). You click <b>3 points</b>. The <b>2nd click is the corner</b> where the angle is measured. The number appears next to the corner.</p>
+<table>
+<tr><th>Angle</th><th>Click 1</th><th>Click 2 (corner)</th><th>Click 3</th><th>You should see</th></tr>
+<tr><td><b>A. KNEE</b></td><td>hip tape</td><td><b>knee tape</b></td><td>ankle tape</td><td>standing about 175-180°, squat about 60-120°</td></tr>
+<tr><td><b>B. HIP</b></td><td>shoulder tape</td><td><b>hip tape</b></td><td>knee tape</td><td>standing about 165-180°, squat about 70-125°</td></tr>
+<tr><td><b>C. TRUNK LEAN</b> (bonus)</td><td>shoulder tape</td><td><b>hip tape</b></td><td>a point straight <b>below</b> the hip tape</td><td>standing about 0-5°, squat about 5-45°</td></tr>
+</table>
+<div class="wa box"><b>If the number looks wrong:</b><br>
+- Knee/hip shows 250° when you expected 110°: Kinovea gave the outside angle. Type <b>360 minus it</b> (360 - 250 = 110).<br>
+- Trunk shows about 175° when you expected about 5°: type <b>180 minus it</b>.</div>
+
+<h3>How to do C (trunk lean) without getting lost</h3>
+<ol>
+<li>Click 1 on the shoulder tape. Click 2 on the hip tape.</li>
+<li>For click 3 you need a point <b>exactly under the hip tape</b>. Easiest way: switch on Kinovea's <b>Grid</b> (drawing toolbar, the square-grid icon). Its vertical lines are exactly "up-down" on the screen. Put click 3 on the same vertical grid line as the hip tape, lower down on the screen.</li>
+<li>Second way if no grid: after click 2, move the mouse straight down from the hip tape and click when the point is directly under it (zoom in, it is easy to see).</li>
+<li><b>Check it works:</b> on the standing moment (moment 1) the trunk number must be small, 0 to 5°. If it shows 10° or more while you stand straight, the point is not straight below. Redo it.</li>
+</ol>
+<p><b>Stuck? Skip trunk lean.</b> It is a bonus. Knee and hip are enough for the report. Just leave the trunk column empty.</p>
+
+<h2><span class="n">5</span>The 9 moments <span class="t">45-50 min</span></h2>
+<p>At these moments you stood still, so the angle does not change from one frame to the next. For each row: go there in Kinovea, measure A, B (and C), type the numbers in the website row.</p>
+<table>
+<tr><th>Website row</th><th>What you were doing</th><th>Time</th><th>Frame</th><th>Knee (A)</th><th>Hip (B)</th><th>Trunk (C)</th></tr>
+<tr><td>1</td><td>Standing</td><td>0:06.11</td><td>183</td><td><input size="4"></td><td><input size="4"></td><td><input size="4"></td></tr>
+<tr><td>2</td><td>Squat hold</td><td>0:16.02</td><td>480</td><td><input size="4"></td><td><input size="4"></td><td><input size="4"></td></tr>
+<tr><td>3</td><td>Squat hold</td><td>0:30.16</td><td>904</td><td><input size="4"></td><td><input size="4"></td><td><input size="4"></td></tr>
+<tr><td>4</td><td>Squat hold</td><td>1:10.47</td><td>2112</td><td><input size="4"></td><td><input size="4"></td><td><input size="4"></td></tr>
+<tr><td>5</td><td>Squat hold</td><td>1:20.01</td><td>2398</td><td><input size="4"></td><td><input size="4"></td><td><input size="4"></td></tr>
+<tr><td>6</td><td>Squat hold (extra, same hold as row 2, 1 s later) <b>typed by you</b></td><td>0:17.02</td><td>510</td><td><input size="4"></td><td><input size="4"></td><td><input size="4"></td></tr>
+<tr><td>7</td><td>Squat hold (extra, same hold as row 4, 1 s later) <b>typed by you</b></td><td>1:11.40</td><td>2139</td><td><input size="4"></td><td><input size="4"></td><td><input size="4"></td></tr>
+<tr><td>8</td><td>Standing</td><td>1:29.29</td><td>2676</td><td><input size="4"></td><td><input size="4"></td><td><input size="4"></td></tr>
+<tr><td>9</td><td>Standing</td><td>1:42.24</td><td>3064</td><td><input size="4"></td><td><input size="4"></td><td><input size="4"></td></tr>
+</table>
+<div class="wa box"><b>Why the numbers look different on the website.</b> The website table has <b>10 rows</b>: 1 standing, 6 squat holds, 2 later standing, 1 extra. Your video has only <b>4</b> clear squat holds, so after you press <b>Suggest moments</b> the website fills the time for rows 1, 2, 3, 4, 5, 8 and 9 (that is 7 rows). <b>Rows 6 and 7 stay empty: type the two extra times from this table yourself</b> (0:17.02 and 1:11.40) in the Kinovea time box of those rows. <b>Row 10 ("Extra, optional") you can leave empty.</b> Total: <b>9 moments</b>. Rows that have no time and no angles are simply ignored.</div>
+<p class="mut">This small table is only your paper notebook (typing here is not saved). The real entry is the website table. Use the same times the website put in its time column.</p>
+<h3>How to go to a particular time in Kinovea</h3>
+<div class="wa box">Kinovea versions differ a little. Try Way 1. If it does not work, use Way 2 (always works). The time you reach does not have to be perfect: you were standing still for seconds, so <b>anywhere within 0.2 s of the time is fine</b>.</div>
+<p><b>First, find the time display.</b> Under the video there is a slider (the timeline). Next to it Kinovea shows the <b>current time</b> (like <code>0:00:16.02</code>) and sometimes the frame number. This is what you watch while you move.</p>
+<p><b>Way 1: type the time.</b></p>
+<ol>
+<li>Click once on the current-time number under the video (some versions: double-click it).</li>
+<li>Type the time, for example <code>0:16.02</code> (or <code>00:00:16.02</code>), press <b>Enter</b>.</li>
+<li>If the video jumps there, done. If the box does nothing, use Way 2.</li>
+</ol>
+<p><b>Way 2: slider + arrow keys (always works).</b></p>
+<ol>
+<li>Click on the slider at roughly the right place. The whole video is 1 min 55 s long, so for 0:16 click about 14 % from the left end. For 1:10 click about 61 % from the left.</li>
+<li>Read the time display. Then press the <b>Right arrow</b> (one frame forward) or <b>Left arrow</b> (one frame back). One frame is 0.033 s. 30 presses = 1 second.</li>
+<li>Stop when the time display shows the wanted time (±0.2 s is fine). Two or three keys per 0.1 s.</li>
+<li>Faster: roll the mouse wheel over the video, or hold the arrow key, to run through frames.</li>
+</ol>
+<p><b>Check you are at the right moment.</b> At a standing moment you must see yourself standing straight. At a squat hold you must see yourself low, not moving. If you see yourself moving, you are in the wrong place: go to the time again.</p>
+<p><b>Frame numbers as a backup:</b> if Kinovea shows a frame number, it equals the frame in the table (give or take 1). You can also set the time display to frames in Kinovea's options (Options -> Preferences -> time format). Use whatever works for you.</p>
+<p><b>Do this at each moment:</b></p>
+<ol>
+<li>Go to the time. Check that the posture looks still and right.</li>
+<li>Zoom in on the legs (mouse wheel or the zoom control) so you can click the middle of each tape.</li>
+<li>Draw <b>A (knee)</b> and <b>B (hip)</b> (and C trunk only if you do it). Write down the numbers.</li>
+<li>Do <b>not</b> delete the drawings. They stay on that moment, and Ctrl+S saves them.</li>
+</ol>
+<div class="ok box"><b>Rule to be honest:</b> do not look at the computer's numbers while you measure. Click, read, write. Compare after.</div>
+<p><b>After 2-3 moments, take a Kinovea snapshot:</b> click the camera icon in Kinovea while your angles are drawn, and save the picture to the folder in step 8. You need 3-4 pictures as evidence.</p>
+
+<h2><span class="n">6</span>Save in Kinovea <span class="t">2 min</span></h2>
+<ul>
+<li>Press <b>Ctrl+S</b> (File -> Save). Kinovea saves your drawn angles in a small file ending in <code>.kva</code>, next to the video, here: <code>...\data\squat_test_1018-154709\processed_videos\</code></li>
+<li>Next time you open the same video in Kinovea, your drawings come back.</li>
+</ul>
+
+<h2><span class="n">7</span>Get the result on the website <span class="t">5 min</span></h2>
+<ol>
+<li>All rows typed? Look under the table: "Result". You see, for knee, hip and trunk, the numbers <b>bias, SD, 95 % low/high, MAE</b>, and small plots.</li>
+<li>Click <b>Save now</b>. Then click <b>Download CSV</b>.</li>
+<li>Take a screenshot of the result table and plots: press <b>Windows + Shift + S</b>, drag around the table, then paste into Paint or Word and save as PNG, or open the Snipping Tool folder: <code>Pictures\Screenshots</code>.</li>
+<li>Click <b>Copy result text</b> and paste it into a Word/Notepad file named <code>result_text.txt</code>.</li>
+<li><b>Big gap (more than 15°)?</b> Check that "Taped side" = right, and that you measured the right leg's tapes.</li>
+</ol>
+
+<h2><span class="n">8</span>Put all evidence in one folder <span class="t">3 min</span></h2>
+<p>Run this once in PowerShell. It copies everything you may need to show ma'am or attach to the report into <code>C:\Current_Mini_Project_Working\report_evidence</code>:</p>
+<pre><button onclick="c(this)">Copy</button>$run = "C:\Current_Mini_Project_Working\MarkerLess-Squat-Analysis-and-Real-Time-Posture-Correction-for-Injury-Prevention-using-Deep-Learning\pose2sim_web\data\squat_test_1018-154709"
+$dst = "C:\Current_Mini_Project_Working\report_evidence"
+New-Item -ItemType Directory -Force $dst | Out-Null
+Copy-Item "$run\kinovea\*" $dst -ErrorAction SilentlyContinue
+Copy-Item "$run\angles_all.csv" $dst
+Copy-Item "$run\results\calibration.toml" $dst
+Copy-Item "$run\results\log.txt" $dst
+Copy-Item "$run\processed_videos\*.kva" $dst -ErrorAction SilentlyContinue
+Copy-Item "$env:USERPROFILE\Downloads\*pipeline_vs_kinovea*.csv" $dst -ErrorAction SilentlyContinue
+Get-ChildItem $dst | Select-Object Name, Length</pre>
+<p>Also drag your Kinovea snapshot pictures and screenshots into the same folder <code>report_evidence</code>.</p>
+<table>
+<tr><th>File</th><th>What it is</th><th>Show it as</th></tr>
+<tr><td>pairs.csv / _pipeline_vs_kinovea.csv</td><td>every pair: Kinovea value, computer value, difference</td><td>Appendix table</td></tr>
+<tr><td>result.txt</td><td>bias, SD, limits, MAE in words</td><td>Numbers for your text</td></tr>
+<tr><td>sheet.json</td><td>your typed measurement sheet (raw)</td><td>Proof of what you measured</td></tr>
+<tr><td>*.kva</td><td>your Kinovea drawings</td><td>Proof, can be reopened</td></tr>
+<tr><td>snapshot PNGs</td><td>Kinovea pictures with angles</td><td>Figure in report</td></tr>
+<tr><td>screenshot of plots</td><td>Bland-Altman plots</td><td>Figure in report</td></tr>
+<tr><td>angles_all.csv</td><td>computer angles for every frame</td><td>Supplement</td></tr>
+<tr><td>log.txt / calibration.toml</td><td>calibration and reprojection error</td><td>Methods details</td></tr>
+</table>
+
+<h2><span class="n">9</span>Repeat a few for honesty <span class="t">15 min, optional</span></h2>
+<p>After a break measure <b>knee and hip again</b> at moments 1, 2, 3, 5, 6. Write them on paper, not on the website. Difference between your two tries = how steady your own hand is. Use it in the limitations (the "ground truth" also has an error).</p>
+
+<h2><span class="n">10</span>What to say to ma'am (simple words) <span class="t">read</span></h2>
+<div class="ok box">"Ma'am, I recorded one squat session with two calibrated cameras and the computer calculated joint angles in 3D. To check them, I put tape markers on my right shoulder, hip, knee and ankle and measured the angles by hand in Kinovea at 9 moments where I stood still. On average the computer's knee angle differed from my hand measurement by <b>[MAE]</b> degrees. About 95 out of 100 differences lie between <b>[low]</b> and <b>[high]</b> degrees. This is a pilot with one person, so it shows the method works and gives the size of the error, but it needs more people before we can say it for everyone."</div>
+<p>Be ready for three questions: <b>Why only one person?</b> (pilot, time; planned next: more people). <b>Why Kinovea?</b> (free, standard, manual measurement on tapes, not a lab system). <b>Why are 3D and 2D different?</b> (Kinovea sees one flat side picture, the computer builds 3D from two cameras; so the side-view version is the fair comparison).</p>
+
+<h2><span class="n">11</span>What to write in the report and the paper <span class="t">20 min</span></h2>
+<h3>Report / paper structure (use the same in both)</h3>
+<table>
+<tr><th>Part</th><th>What to put</th></tr>
+<tr><td>Methods: Validation</td><td>One participant, one 2-minute trial (stand, hold squat, repeat), two cameras 2.9 m apart, tapes on right shoulder, hip, knee, ankle. 9 still postures. Angles measured manually in Kinovea (version number) on the synced side video. Angles from the pipeline: Pose2Sim 0.10.49, RTMPose HALPE-26, 3D triangulation, 6 Hz Butterworth filter, 29.97 fps.</td></tr>
+<tr><td>Statistics</td><td>Difference = pipeline minus Kinovea. Bias (mean), SD, 95 % limits of agreement (bias ± 1.96 SD), mean absolute error. Bland-Altman plot. Observer repeat difference.</td></tr>
+<tr><td>Results</td><td>The table below + the Bland-Altman figure + one Kinovea snapshot figure.</td></tr>
+<tr><td>Limitations</td><td>The paragraph below.</td></tr>
+</table>
+<h3>Result table to fill (copy numbers from the website)</h3>
+<table>
+<tr><th>Angle</th><th>n</th><th>Bias (°)</th><th>SD (°)</th><th>95 % limits (°)</th><th>MAE (°)</th></tr>
+<tr><td>Knee, side-view plane (main)</td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>Hip, side-view plane (main)</td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>Trunk lean (if done)</td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>Knee, full 3D (second)</td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>Hip, full 3D (second)</td><td></td><td></td><td></td><td></td><td></td></tr>
+</table>
+<h3>Sentence for the results</h3>
+<pre><button onclick="c(this)">Copy</button>In a pilot validation on one participant (one trial, nine static postures, 18 knee and hip angle pairs; use your real count), the pipeline's side-view knee angle differed from the manual Kinovea measurement by [bias] degrees on average (SD [sd]; 95% limits of agreement [low] to [high]; MAE [mae]). For the hip the corresponding values were [bias], [sd], [low] to [high] and [mae] degrees. The observer's own repeat measurements differed by [w] degrees.</pre>
+<h3>Careful words</h3>
+<table>
+<tr><th>Do not write</th><th>Write</th></tr>
+<tr><td>"The dataset has an error of ±X°"</td><td>"In this pilot, the pipeline showed an agreement of ±X° with manual reference measurements"</td></tr>
+<tr><td>"Ground truth"</td><td>"manual reference measurement (Kinovea)"</td></tr>
+<tr><td>"The system is accurate"</td><td>"The agreement was X° (MAE) in this setup"</td></tr>
+<tr><td>"Applies to all recordings"</td><td>"Was recorded with the same setup and software settings as the dataset, so it indicates the order of magnitude; validation with more participants is future work"</td></tr>
+</table>
+<h3>Limitations paragraph</h3>
+<pre><button onclick="c(this)">Copy</button>Limitations: one participant and one trial; nine static postures (18 knee and hip angle pairs; use your real count), so the limits of agreement are imprecise; a single observer measured manually on 2D video, so the reference itself has an error of about [w] degrees (repeat measurement); the tape markers do not coincide exactly with the pose-estimation keypoints, so a small constant offset is expected; the 3D reconstruction had a mean reprojection error of 3.8 px (about 8.7 mm), lens distortion was not modelled in the triangulation, and the two cameras were 2.9 m apart at about 89 degrees; side-view-plane angles are the like-for-like comparison with the 2D reference, whereas full-3D angles cannot be verified from one 2D view. The agreement reported here may not apply to other participants, faster movement or different camera set-ups.</pre>
+
+<h2>Checklist</h2>
+<label><input type="checkbox"> 1 Website started, run open, Compare tab, side = right, Suggest moments</label>
+<label><input type="checkbox"> 2 side_synced.mp4 open in Kinovea</label>
+<label><input type="checkbox"> 5 Nine moments measured (knee, hip; trunk optional) and typed into the website</label>
+<label><input type="checkbox"> 5 Three or four Kinovea snapshots saved</label>
+<label><input type="checkbox"> 6 Ctrl+S in Kinovea</label>
+<label><input type="checkbox"> 7 Save now + Download CSV + screenshots + Copy result text</label>
+<label><input type="checkbox"> 8 Evidence folder script run</label>
+<label><input type="checkbox"> 9 Repeat round (optional)</label>
+<label><input type="checkbox"> 10-11 Numbers filled in the sentences</label>
+
+<h2>Where everything is</h2>
+<table>
+<tr><th>What</th><th>Where</th></tr>
+<tr><td>This page</td><td><code>C:\Current_Mini_Project_Working\MarkerLess-Squat-...-Deep-Learning\pose2sim_web\DO_THIS_STEP_BY_STEP.html</code></td></tr>
+<tr><td>Longer explanation of all names</td><td>same folder, <code>GUIDE_KINOVEA_AND_ERROR.html</code></td></tr>
+<tr><td>Video for Kinovea + your .kva file</td><td><code>pose2sim_web\data\squat_test_1018-154709\processed_videos\</code></td></tr>
+<tr><td>Website's saved comparison</td><td><code>pose2sim_web\data\squat_test_1018-154709\kinovea\</code></td></tr>
+<tr><td>Everything gathered for ma'am / report</td><td><code>C:\Current_Mini_Project_Working\report_evidence\</code></td></tr>
+</table>
+
+<script>function c(b){var t=b.parentNode.textContent.replace('Copy','').trim();navigator.clipboard.writeText(t);b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1200)}</script>
+</body></html>

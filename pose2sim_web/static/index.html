@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pose2Sim Web</title>
+<style>
+/* Layout: left sidebar (new run, system check, saved runs) + one main column. A run has three tabs:
+   Progress and files, Angles (graph with left/right checkboxes + synced videos), Kinovea compare. */
+:root {
+  --bg: #f1f4f6; --surface: #ffffff; --ink: #14202b; --muted: #55656f; --line: #d7dfe5;
+  --accent: #0b7c82; --accent-soft: #ddf0f0; --warn: #9a5200; --warn-soft: #fbecd3; --good: #1d7a3e; --bad: #b3261e;
+  --code-bg: #0f1b24; --code-ink: #d6e7ee;
+  --ui: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; --mono: Consolas, "Cascadia Mono", "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) { :root { color-scheme: dark;
+  --bg: #0d151b; --surface: #15212a; --ink: #e5edf2; --muted: #94a6b3; --line: #27353f;
+  --accent: #52c5cb; --accent-soft: #12383b; --warn: #f0a54a; --warn-soft: #382811; --good: #5fcf86; --bad: #ff8a80;
+  --code-bg: #091016; } }
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--ui); }
+h1, h2, h3 { margin: 0; line-height: 1.2; }
+h2 { font-size: 1.25rem; } h3 { font-size: 1rem; }
+p { margin: 0; }
+code, .mono { font-family: var(--mono); font-size: .88em; }
+a { color: var(--accent); }
+.muted { color: var(--muted); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.layout { display: grid; grid-template-columns: 270px minmax(0, 1fr); min-height: 100vh; }
+aside { background: var(--surface); border-right: 1px solid var(--line); padding: 18px 14px; display: flex; flex-direction: column; gap: 14px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+aside h1 { font-size: 1.2rem; }
+main { padding: 22px clamp(14px, 3vw, 34px) 80px; display: flex; flex-direction: column; gap: 18px; min-width: 0; max-width: 1200px; }
+.navbtn { display: block; width: 100%; text-align: left; background: transparent; border: 1px solid var(--line); color: var(--ink);
+  border-radius: 6px; padding: 8px 12px; font: inherit; cursor: pointer; }
+.navbtn.on, .navbtn:hover { border-color: var(--accent); color: var(--accent); }
+.runs { display: flex; flex-direction: column; gap: 6px; }
+.runrow { text-align: left; border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 6px; padding: 7px 10px; cursor: pointer; font: inherit; display: flex; flex-direction: column; gap: 2px; }
+.runrow.on { border-color: var(--accent); background: var(--accent-soft); }
+.runrow small { color: var(--muted); font-size: .78rem; }
+.pill { display: inline-block; font: 600 .72rem/1 var(--mono); padding: 4px 7px; border-radius: 4px; background: var(--line); color: var(--ink); }
+.pill.done { background: var(--accent-soft); color: var(--accent); } .pill.running, .pill.queued { background: var(--warn-soft); color: var(--warn); }
+.pill.error, .pill.interrupted { background: var(--bad); color: #fff; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.card > h3 { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.fld { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--muted); min-width: 0; }
+.fld > span { font-weight: 600; color: var(--ink); }
+input[type=text], input[type=number], select, textarea { font: .9rem var(--mono); padding: 7px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); width: 100%; min-width: 0; }
+input[type=file] { font: .8rem var(--mono); max-width: 100%; }
+.vid { display: flex; flex-direction: column; gap: 5px; padding: 10px; border: 1px dashed var(--line); border-radius: 6px; }
+.vid label { font-weight: 600; font-size: .85rem; }
+.opt { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
+.opt input { margin-top: 5px; accent-color: var(--accent); }
+.btn { font: 600 .88rem var(--ui); border: 1px solid var(--accent); background: var(--accent); color: #fff; border-radius: 6px; padding: 8px 14px; cursor: pointer; }
+.btn:hover { filter: brightness(1.1); } .btn:disabled { opacity: .5; cursor: default; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn.danger { background: transparent; color: var(--bad); border-color: var(--bad); }
+.note { border-left: 3px solid var(--accent); padding: 2px 0 2px 12px; font-size: .9rem; }
+.note.warn { border-color: var(--warn); } .note.bad { border-color: var(--bad); } .note.good { border-color: var(--good); }
+.hint { font-size: .82rem; color: var(--muted); }
+table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+th, td { text-align: left; padding: 6px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 .72rem var(--mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+td.num, th.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.scroll { overflow-x: auto; }
+pre.log { background: var(--code-bg); color: var(--code-ink); border-radius: 6px; padding: 12px; margin: 0; max-height: 340px; overflow: auto; font: .78rem/1.45 var(--mono); white-space: pre-wrap; word-break: break-word; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+.tab { border: 0; background: transparent; color: var(--muted); font: 600 .92rem var(--ui); padding: 9px 14px; cursor: pointer; border-bottom: 3px solid transparent; }
+.tab.on { color: var(--accent); border-color: var(--accent); }
+.stepper { display: flex; flex-wrap: wrap; gap: 6px; }
+.step { font: .78rem var(--mono); padding: 5px 9px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); }
+.step.now { border-color: var(--warn); color: var(--warn); background: var(--warn-soft); } .step.past { border-color: var(--accent); color: var(--accent); }
+.bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; } .bar > i { display: block; height: 100%; background: var(--accent); width: 0; }
+/* angles */
+.vgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; }
+.vgrid video { width: 100%; background: #000; border-radius: 6px; max-height: 360px; }
+.vgrid figcaption { font-size: .8rem; color: var(--muted); margin-bottom: 3px; }
+figure { margin: 0; }
+.angwrap { display: grid; grid-template-columns: minmax(250px, 310px) minmax(0, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 980px) { .angwrap { grid-template-columns: 1fr; } }
+.sel td, .sel th { padding: 4px 6px; } .sel input { accent-color: var(--accent); width: 17px; height: 17px; }
+.sel td.lbl { cursor: pointer; } .sel .sw { display: inline-block; width: 11px; height: 11px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.chartbox { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px; }
+.chartbox svg { width: 100%; height: auto; display: block; touch-action: pan-y; cursor: crosshair; user-select: none; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: .78rem/1.4 var(--mono); box-shadow: 0 4px 14px rgba(0,0,0,.18); max-width: 300px; z-index: 5; }
+.tip b { color: var(--accent); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sheet td { padding: 3px 4px; } .sheet input { min-width: 60px; padding: 5px 6px; }
+.sheet .sec { font: .78rem var(--mono); color: var(--muted); white-space: nowrap; }
+.plots { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 10px; }
+.plots svg { width: 100%; height: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.ok { color: var(--good); font-weight: 600; } .no { color: var(--bad); font-weight: 600; }
+@media (max-width: 800px) { .layout { grid-template-columns: 1fr; } aside { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); } }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside>
+    <h1>Pose2Sim Web</h1>
+    <p class="hint">Process a side + front recording, then look at the angles.</p>
+    <button class="navbtn" id="navNew">+ New run</button>
+    <button class="navbtn" id="navSys">System check</button>
+    <h3 style="margin-top:6px">Saved runs</h3>
+    <div class="runs" id="runs"><span class="hint">None yet.</span></div>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
+  var main = $("#main");
+  var S = { view: "new", run: null, tab: "progress", info: null, ang: null, sel: {}, variant: "sag", cur: -1, x0: null, x1: null, poll: null, kin: null };
+  var PALETTE = ["#0072b2", "#d55e00", "#009e73", "#cc79a7", "#8a6d00", "#56b4e9", "#b5301e", "#4c4c9c", "#2a9d8f", "#7a7a7a", "#e69f00", "#6b8e23"];
+  var STAGES = ["setup", "sync", "calibration", "extract", "pose", "triangulation", "angles", "packaging"];
+
+  function api(path, opts) {
+    return fetch(path, opts).then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || ("HTTP " + r.status)); return j; }); });
+  }
+  function fmtT(t) { if (!isFinite(t)) return "n/a"; var m = Math.floor(t / 60), s = t - 60 * m; return m + ":" + (s < 10 ? "0" : "") + s.toFixed(2); }
+  function num(v) { var n = parseFloat(String(v == null ? "" : v).replace(",", ".")); return isFinite(n) ? n : NaN; }
+  function parseTime(v) {
+    v = String(v || "").trim().replace(",", "."); if (!v) return null;
+    var p = v.split(":").map(Number); if (p.length > 3 || p.some(function (x) { return !isFinite(x); })) return null;
+    var t = 0; p.forEach(function (x) { t = t * 60 + x; }); return t;
+  }
+  function copyText(text, btn) {
+    var ok = function () { var o = btn.textContent; btn.textContent = "Copied"; setTimeout(function () { btn.textContent = o; }, 1200); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, function () {});
+  }
+
+  /* ================= navigation ================= */
+  function go(hash) { location.hash = hash; }
+  window.addEventListener("hashchange", route);
+  $("#navNew").onclick = function () { go("#new"); };
+  $("#navSys").onclick = function () { go("#system"); };
+  function route() {
+    clearInterval(S.poll); S.poll = null;
+    var h = location.hash.replace(/^#/, "") || "new", p = h.split("/");
+    $("#navNew").classList.toggle("on", p[0] === "new"); $("#navSys").classList.toggle("on", p[0] === "system");
+    if (p[0] === "system") return viewSystem();
+    if (p[0] === "run" && p[1]) { S.run = p[1]; S.tab = p[2] || "progress"; return viewRun(); }
+    S.run = null; viewNew();
+  }
+  function refreshRuns() {
+    api("/api/runs").then(function (rows) {
+      var box = $("#runs");
+      if (!rows.length) { box.innerHTML = "<span class='hint'>None yet.</span>"; return; }
+      box.innerHTML = rows.map(function (r) {
+        return "<button class='runrow" + (r.name === S.run ? " on" : "") + "' data-run='" + esc(r.name) + "'><span>" + esc(r.name) + "</span><small><span class='pill " + esc(r.status) + "'>" + esc(r.status) + "</span> " + esc(r.created) + "</small></button>";
+      }).join("");
+      box.querySelectorAll("[data-run]").forEach(function (b) { b.onclick = function () { go("#run/" + b.getAttribute("data-run") + (S.tab && S.run ? "/" + S.tab : "")); }; });
+    }).catch(function () {});
+  }
+
+  /* ================= new run ================= */
+  function vidField(id, label, hint) {
+    return "<div class='vid'><label for='f_" + id + "'>" + label + "</label><input type='file' id='f_" + id + "' accept='video/*,.mp4,.mov,.mts'>" +
+      "<input type='text' id='p_" + id + "' placeholder='or paste the full path of the file on this PC' aria-label='" + esc(label) + " path'>" + (hint ? "<span class='hint'>" + hint + "</span>" : "") + "</div>";
+  }
+  function viewNew() {
+    main.innerHTML =
+      "<h2>New run</h2>" +
+      "<div id='modelBanner'></div>" +
+      "<form id='frm' class='card' style='gap:16px' autocomplete='off'>" +
+      "<label class='fld'><span>Run name</span><input type='text' id='name' value='squat_test' maxlength='40'></label>" +
+
+      "<div class='card'><h3>1 · Intrinsic calibration <span class='hint'>(each camera alone: a checkerboard moved slowly in front of a still camera)</span></h3>" +
+      "<label class='opt'><input type='radio' name='intr_mode' value='videos' checked><span><b>I have the intrinsic videos</b></span></label>" +
+      "<div id='intrVideos' class='grid2'>" + vidField("intr_side", "Side camera, intrinsic video") + vidField("intr_front", "Front camera, intrinsic video") + "</div>" +
+      "<label class='opt'><input type='radio' name='intr_mode' value='reuse'><span><b>Reuse intrinsics I already calculated</b> <span class='hint'>(saves several minutes; same cameras and camera settings)</span></span></label>" +
+      "<div id='intrReuse' class='grid2' hidden><label class='fld'><span>From an earlier run in this website</span><select id='intr_from_run'><option value='path'>(none: use the file path below)</option></select></label>" +
+      "<label class='fld'><span>or a calibration.toml file</span><input type='text' id='intr_from_path' placeholder='C:\\...\\calibration.toml'></label></div>" +
+      "<div class='grid2'><label class='fld'><span>Inner corners of the intrinsic board (columns,rows)</span><input type='text' id='intr_corners' value='6,7'><span class='hint'>A board of 7 x 8 squares has 6 x 7 inner corners.</span></label>" +
+      "<label class='fld'><span>Square size (mm)</span><input type='text' id='intr_square' value='41'><span class='hint'>Measure across 6 squares and divide by 6. It only scales the 3D result, it does not change any angle.</span></label></div></div>" +
+
+      "<div class='card'><h3>2 · Extrinsic calibration <span class='hint'>(where the two cameras stand: a board seen by both cameras)</span></h3>" +
+      "<label class='opt'><input type='radio' name='ext_mode' value='in_video' checked><span><b>The board is in the squat videos</b>, before the clap (for example lying on the floor)</span></label>" +
+      "<label class='opt'><input type='radio' name='ext_mode' value='separate'><span><b>I have separate extrinsic videos</b> (board seen by both cameras plus one clap)</span></label>" +
+      "<div id='extVideos' class='grid2' hidden>" + vidField("ext_side", "Side camera, extrinsic video") + vidField("ext_front", "Front camera, extrinsic video") + "</div>" +
+      "<div class='grid2'><label class='fld'><span>Inner corners of the extrinsic board</span><input type='text' id='ext_corners' value='6,7'></label>" +
+      "<label class='fld'><span>Square size (mm)</span><input type='text' id='ext_square' value='41'></label>" +
+      "<label class='fld'><span>Board position</span><select id='board_position'><option value='horizontal'>Flat on the floor</option><option value='vertical'>Held or standing upright</option></select></label></div></div>" +
+
+      "<div class='card'><h3>3 · Squat videos <span class='hint'>(clap sync is automatic: the cameras are aligned on the loudest sound both hear)</span></h3>" +
+      "<div class='grid2'>" + vidField("side", "Side camera video", "board (if inside) → clap → movement") + vidField("front", "Front camera video") + "</div>" +
+      "<div class='grid2'><label class='fld'><span>Claps in these videos</span><select id='squat_claps'><option value='1'>One clap, then the movement until the end</option><option value='2'>A clap at the start and another at the end</option></select></label>" +
+      "<label class='fld'><span>Look for the clap in the first (seconds)</span><input type='text' id='clap_window' value='90'></label></div></div>" +
+
+      "<div class='card'><h3>4 · Processing</h3><div class='grid2'>" +
+      "<label class='fld'><span>Pose model quality</span><select id='pose_mode'><option value='balanced'>balanced (recommended on a CPU)</option><option value='lightweight'>lightweight (fastest, less accurate)</option><option value='performance'>performance (most accurate, slowest)</option></select></label>" +
+      "<label class='fld'><span>Run on</span><select id='device'><option value='auto'>auto (GPU if available, else CPU)</option><option value='cpu'>CPU</option><option value='cuda'>GPU (NVIDIA)</option></select></label></div></div>" +
+
+      "<div class='row'><button class='btn' type='submit' id='go'>Process videos</button><span id='ferr' class='no'></span></div>" +
+      "<div id='upBar' hidden><div class='bar'><i id='upFill'></i></div><span class='hint' id='upTxt'></span></div>" +
+      "</form>";
+    var frm = $("#frm");
+    var toggle = function () {
+      $("#intrVideos").hidden = frm.intr_mode.value !== "videos"; $("#intrReuse").hidden = frm.intr_mode.value !== "reuse";
+      $("#extVideos").hidden = frm.ext_mode.value !== "separate";
+    };
+    frm.querySelectorAll("input[type=radio]").forEach(function (r) { r.onchange = toggle; });
+    api("/api/calibrations").then(function (rows) {
+      var sel = $("#intr_from_run"); rows.forEach(function (c) { var o = document.createElement("option"); o.value = c.name; o.textContent = c.name + "  (" + c.created + ")"; sel.appendChild(o); });
+    }).catch(function () {});
+    var banner = function () {
+      api("/api/system").then(function (s) {
+        var m = s.models && s.models[$("#pose_mode").value];
+        if (!s.pose2sim) $("#modelBanner").innerHTML = "<div class='note bad'><b>Pose2Sim is not installed</b> in this Python. Run the install block from the plan, then restart this website.</div>";
+        else if (m && !m.ready) $("#modelBanner").innerHTML = "<div class='note warn'><b>The pose models for \"" + esc($("#pose_mode").value) + "\" are not downloaded yet.</b> A run would fail at the pose step. Open <a href='#system'>System check</a> and press Download (needs internet, once).</div>";
+        else $("#modelBanner").innerHTML = "";
+      }).catch(function () {});
+    };
+    $("#pose_mode").onchange = banner; banner();
+    frm.onsubmit = function (e) {
+      e.preventDefault(); $("#ferr").textContent = "";
+      var fd = new FormData();
+      ["name", "intr_corners", "intr_square", "ext_corners", "ext_square", "board_position", "squat_claps", "clap_window", "pose_mode", "device", "intr_from_run", "intr_from_path"].forEach(function (k) { fd.append(k, $("#" + k).value); });
+      fd.append("intr_mode", frm.intr_mode.value); fd.append("ext_mode", frm.ext_mode.value);
+      ["intr_side", "intr_front", "ext_side", "ext_front", "side", "front"].forEach(function (k) {
+        var f = $("#f_" + k), p = $("#p_" + k); if (!f) return;
+        if (f.files && f.files[0]) fd.append(k, f.files[0]); else if (p.value.trim()) fd.append(k + "_path", p.value.trim());
+      });
+      var xhr = new XMLHttpRequest(); xhr.open("POST", "/api/runs");
+      $("#upBar").hidden = false; $("#go").disabled = true;
+      xhr.upload.onprogress = function (ev) { if (ev.lengthComputable) { $("#upFill").style.width = (100 * ev.loaded / ev.total) + "%"; $("#upTxt").textContent = "Uploading " + (ev.loaded / 1048576).toFixed(0) + " / " + (ev.total / 1048576).toFixed(0) + " MB (pasting a path instead of choosing a file skips this)"; } };
+      xhr.onload = function () {
+        var j = {}; try { j = JSON.parse(xhr.responseText); } catch (x) {}
+        if (xhr.status === 200 && j.name) { refreshRuns(); go("#run/" + j.name + "/progress"); }
+        else { $("#ferr").textContent = j.error || ("Failed (HTTP " + xhr.status + ")"); $("#go").disabled = false; $("#upBar").hidden = true; }
+      };
+      xhr.onerror = function () { $("#ferr").textContent = "Could not reach the website."; $("#go").disabled = false; };
+      xhr.send(fd);
+    };
+  }
+
+  /* ================= system check ================= */
+  function viewSystem() {
+    main.innerHTML = "<h2>System check</h2><div id='sys' class='card'>Checking...</div>";
+    var draw = function () {
+      api("/api/system").then(function (s) {
+        var yes = function (b, t) { return b ? "<span class='ok'>" + (t || "yes") + "</span>" : "<span class='no'>" + (t || "no") + "</span>"; };
+        var rows = "<tr><td>Python</td><td class='mono'>" + esc(s.python) + " &nbsp; " + esc(s.executable) + "</td></tr>" +
+          "<tr><td>Processing engine (two_view/run_pose2sim.py)</td><td>" + yes(s.engine, "found") + "</td></tr>" +
+          "<tr><td>Pose2Sim</td><td>" + (s.pose2sim ? yes(true, "installed " + esc(s.pose2sim)) : yes(false, "not installed") + " <span class='hint'>" + esc(s.pose2sim_error || "") + "</span>") + "</td></tr>" +
+          "<tr><td>Internet (needed once, to download the pose models)</td><td>" + yes(s.internet, s.internet ? "connected" : "not connected") + " <span class='hint'>" + esc(s.internet_msg) + "</span></td></tr>" +
+          "<tr><td>Compute</td><td class='mono'>" + esc((s.onnx_providers || []).join(", ")) + " <span class='hint'>(CUDAExecutionProvider = NVIDIA GPU usable)</span></td></tr>" +
+          "<tr><td>Free disk space where runs are saved</td><td>" + esc(s.disk_free_gb) + " GB &nbsp; <span class='mono'>" + esc(s.data_dir) + "</span></td></tr>";
+        var models = Object.keys(s.models || {}).map(function (m) {
+          var x = s.models[m];
+          return "<tr><td><b>" + m + "</b></td><td>" + (x.ready ? yes(true, "downloaded") : x.downloading ? "<span class='no'>downloading...</span>" : yes(false, "not downloaded")) + "</td>" +
+            "<td>" + (x.ready ? "" : "<button class='btn' data-dl='" + m + "'" + (x.downloading ? " disabled" : "") + ">Download</button>") + "</td></tr>";
+        }).join("");
+        $("#sys").innerHTML = "<div class='scroll'><table>" + rows + "</table></div><h3>Pose models</h3><p class='hint'>The pose step needs these files. Without them a run fails with 'getaddrinfo failed' (no internet while downloading). Download once, with internet on; they are kept on this PC.</p>" +
+          "<div class='scroll'><table>" + models + "</table></div><pre class='log' id='dlLog' hidden></pre>";
+        $("#sys").querySelectorAll("[data-dl]").forEach(function (b) { b.onclick = function () {
+          api("/api/models/" + b.getAttribute("data-dl"), { method: "POST" }).then(function () { poll(b.getAttribute("data-dl")); });
+        }; });
+      }).catch(function (e) { $("#sys").textContent = "Could not read the system status: " + e.message; });
+    };
+    var poll = function (mode) {
+      clearInterval(S.poll);
+      S.poll = setInterval(function () {
+        api("/api/models/" + mode + "/log").then(function (j) {
+          var pre = $("#dlLog"); if (!pre) return; pre.hidden = false; pre.textContent = j.log || "starting..."; if (!j.running) { clearInterval(S.poll); draw(); }
+        });
+      }, 2000);
+    };
+    draw();
+  }
+
+  /* ================= run view ================= */
+  function viewRun() {
+    refreshRuns();
+    main.innerHTML = "<div class='card'>Loading...</div>";
+    var load = function () {
+      return api("/api/runs/" + S.run).then(function (info) {
+        var first = !S.info || S.info.name !== info.name;
+        S.info = info;
+        if (info.status === "done" && (first || !S.ang || S.ang.run !== info.name)) {
+          return api("/api/runs/" + S.run + "/angles").then(function (a) { a.run = info.name; S.ang = a; initSel(); }).catch(function () { S.ang = null; });
+        }
+      });
+    };
+    load().then(function () {
+      drawRun();
+      if (S.info.status === "running" || S.info.status === "queued") S.poll = setInterval(function () { load().then(function () { updateProgress(); if (S.info.status === "done") { clearInterval(S.poll); drawRun(); refreshRuns(); } if (S.info.status === "error") { clearInterval(S.poll); refreshRuns(); drawRun(); } }); }, 2500);
+    }).catch(function (e) { main.innerHTML = "<div class='card'><span class='no'>" + esc(e.message) + "</span></div>"; });
+  }
+  function drawRun() {
+    var i = S.info;
+    main.innerHTML = "<div class='row' style='justify-content:space-between'><div><h2>" + esc(i.name) + " <span class='pill " + esc(i.status) + "'>" + esc(i.status) + "</span></h2>" +
+      "<p class='hint'>Saved in <span class='mono'>" + esc(i.folder) + "</span></p></div><button class='btn danger' id='del'>Delete this run</button></div>" +
+      "<div class='tabs'><button class='tab' data-tab='progress'>Progress and files</button><button class='tab' data-tab='angles'>Angles</button><button class='tab' data-tab='kinovea'>Compare with Kinovea</button></div><div id='tabBody'></div>";
+    main.querySelectorAll(".tab").forEach(function (t) { t.classList.toggle("on", t.getAttribute("data-tab") === S.tab); t.onclick = function () { go("#run/" + S.run + "/" + t.getAttribute("data-tab")); }; });
+    $("#del").onclick = function () {
+      if (!confirm("Delete the run folder " + i.name + " and everything saved in it? Your original videos are not touched.")) return;
+      api("/api/runs/" + S.run, { method: "DELETE" }).then(function () { S.info = null; refreshRuns(); go("#new"); }).catch(function (e) { alert(e.message); });
+    };
+    if (S.tab === "angles") return tabAngles();
+    if (S.tab === "kinovea") return tabKinovea();
+    tabProgress();
+  }
+
+  function tabProgress() {
+    var i = S.info, st = i.settings || {};
+    var rowsS = [["Created", st.created], ["Intrinsics", st.intr_mode === "reuse" ? "reused from " + (st.intr_from || "") : "from the intrinsic videos"],
+      ["Intrinsic board", st.intr_corners + " inner corners, " + st.intr_square + " mm"], ["Extrinsic", st.ext_mode === "separate" ? "separate extrinsic videos" : "board inside the squat videos"],
+      ["Extrinsic board", st.ext_corners + " inner corners, " + st.ext_square + " mm, " + st.board_position], ["Claps", st.squat_claps + " per squat video"],
+      ["Pose model / device", st.pose_mode + " / " + st.device]].map(function (r) { return "<tr><td>" + r[0] + "</td><td>" + esc(r[1]) + "</td></tr>"; }).join("");
+    var calib = i.calib ? Object.keys(i.calib).map(function (k) { return "<tr><td>" + esc(k) + "</td><td>" + esc(i.calib[k]) + "</td></tr>"; }).join("") : "";
+    var sync = i.sync ? "<tr><td>Clap in side video</td><td>" + esc(i.sync.t_clap_side_s) + " s</td></tr><tr><td>Clap in front video</td><td>" + esc(i.sync.t_clap_front_s) + " s</td></tr>" +
+      "<tr><td>Squat part starts at (side video time)</td><td>" + esc(i.sync.squat_start_side_s) + " s</td></tr><tr><td>Sync reliable</td><td>" + esc(i.sync.reliable) + "</td></tr>" : "";
+    var files = (i.files || []).map(function (f) { return "<tr><td><a href='/api/runs/" + esc(i.name) + "/file/" + esc(f.path) + "' target='_blank'>" + esc(f.path) + "</a></td><td class='num'>" + f.mb + " MB</td></tr>"; }).join("");
+    var hint = "";
+    if (i.status === "error" || i.status === "interrupted") {
+      if (/getaddrinfo|URLError|urlopen/i.test(i.log)) hint = "<div class='note bad'><b>No internet while downloading the pose models.</b> Connect to the internet, open <a href='#system'>System check</a>, press Download for \"" + esc(st.pose_mode) + "\", then make a new run (set \"Reuse intrinsics\" to skip recalculating them).</div>";
+      else if (i.status === "interrupted") hint = "<div class='note warn'>The website was closed while this run was processing. Start a new run.</div>";
+      else hint = "<div class='note bad'>The run stopped with an error. Read the last lines of the log below. You can send me those lines.</div>";
+    }
+    $("#tabBody").innerHTML = hint + "<div class='card'><h3>Progress</h3><div class='stepper' id='stepper'></div><div class='bar' id='pbar' hidden><i></i></div><span class='hint' id='ptxt'></span></div>" +
+      "<div class='card'><h3>Log <span class='hint'>(saved as run.log)</span></h3><pre class='log' id='log'></pre></div>" +
+      "<div class='grid2'><div class='card'><h3>Settings used</h3><div class='scroll'><table>" + rowsS + "</table></div></div>" +
+      "<div class='card'><h3>Calibration and sync</h3><div class='scroll'><table>" + (calib + sync || "<tr><td class='hint'>Shown when the run has finished calibration.</td></tr>") + "</table></div></div></div>" +
+      "<div class='card'><h3>Saved files</h3><div class='scroll'><table>" + (files || "<tr><td class='hint'>Files appear here while the run progresses.</td></tr>") + "</table></div></div>";
+    updateProgress();
+  }
+  function updateProgress() {
+    var i = S.info; if (!i || S.tab !== "progress" || !$("#stepper")) return;
+    var idx = STAGES.indexOf(i.stage);
+    $("#stepper").innerHTML = STAGES.map(function (s, k) { var cls = i.status === "done" ? "past" : (k < idx ? "past" : k === idx ? "now" : ""); return "<span class='step " + cls + "'>" + s + "</span>"; }).join("");
+    var pb = $("#pbar"); if (i.progress && i.status === "running") { pb.hidden = false; pb.firstChild.style.width = (100 * i.progress.done / i.progress.total) + "%"; $("#ptxt").textContent = i.stage + ": " + i.progress.done + " / " + i.progress.total + " frames"; } else { pb.hidden = true; $("#ptxt").textContent = i.status === "running" ? "Working on: " + (i.stage || "starting") + " (on a CPU the pose step takes the longest)" : ""; }
+    var lg = $("#log"); if (lg) { var atEnd = lg.scrollTop + lg.clientHeight >= lg.scrollHeight - 30; lg.textContent = i.log || ""; if (atEnd) lg.scrollTop = lg.scrollHeight; }
+  }
+
+  /* ================= angles tab ================= */
+  function keyFor(it, side) { return it.pair ? it.key + "_" + side + "_" + it.group : it.key + "_" + it.group; }
+  function initSel() {
+    S.sel = {}; S.cur = -1; S.x0 = S.x1 = null;
+    ["knee"].forEach(function (k) { S.sel["knee_L_joint"] = true; S.sel["knee_R_joint"] = true; });
+  }
+  function colorOf(it) { var keys = []; (S.ang.meta || []).forEach(function (m) { if (keys.indexOf(m.key) < 0) keys.push(m.key); }); return PALETTE[keys.indexOf(it.key) % PALETTE.length]; }
+  function itemsFor(group) {
+    var seen = {}, out = [];
+    (S.ang.meta || []).forEach(function (m) {
+      if (m.group !== group) return;
+      if (m.group === "joint" && m.variant !== S.variant) return;
+      out.push(m);
+    });
+    return out;
+  }
+  function seriesId(it, side) { return it.pair ? it.id.replace("{S}", side) : it.id; }
+  function activeSeries() {
+    var out = [];
+    (S.ang.meta || []).forEach(function (it) {
+      if (it.group === "joint" && it.variant !== S.variant) return;
+      (it.pair ? ["L", "R"] : [""]).forEach(function (side) {
+        if (!S.sel[keyFor(it, side)]) return;
+        var id = seriesId(it, side); if (!S.ang.series[id]) return;
+        out.push({ id: id, label: it.label + (side ? " " + (side === "L" ? "left" : "right") : ""), color: colorOf(it), dash: side === "R" ? "6 4" : "", data: S.ang.series[id] });
+      });
+    });
+    return out;
+  }
+  function idxForFrame(f) { var fr = S.ang.frame, lo = 0, hi = fr.length - 1; if (f <= fr[0]) return 0; if (f >= fr[hi]) return hi;
+    while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (fr[mid] <= f) lo = mid; else hi = mid; } return lo; }
+
+  function tabAngles() {
+    var tb = $("#tabBody");
+    if (S.info.status !== "done" || !S.ang) { tb.innerHTML = "<div class='card'>The angles are available when the run has finished. " + (S.info.status === "running" ? "It is still processing; see the Progress tab." : "") + "</div>"; return; }
+    var vids = S.info.overlay_proxy.length ? S.info.overlay_proxy : S.info.videos.filter(function (v) { return /synced/.test(v); });
+    var path = function (v) { return "/api/runs/" + esc(S.info.name) + "/file/" + (S.info.overlay_proxy.indexOf(v) >= 0 ? "results/" : "processed_videos/") + v; };
+    var vhtml = vids.map(function (v) { return "<figure><figcaption>" + esc(v.replace(/\.mp4$/, "").replace(/_/g, " ")) + "</figcaption><video data-v='" + esc(v) + "' src='" + path(v) + "' controls muted preload='metadata' playsinline></video></figure>"; }).join("");
+    tb.innerHTML =
+      "<div class='note'>Tick the angles to show. <b>Left</b> is a solid line, <b>Right</b> is dashed. Move the mouse over the graph, or touch it, to read the values; click or tap to jump the videos to that moment.</div>" +
+      (vhtml ? "<div class='vgrid'>" + vhtml + "</div>" : "<div class='note warn'>No playable video was saved for this run.</div>") +
+      "<div class='angwrap'><div class='card'><h3>Angles</h3>" +
+      "<div class='row'><label class='opt'><input type='radio' name='variant' value='sag'" + (S.variant === "sag" ? " checked" : "") + "><span>side-view plane</span></label><label class='opt'><input type='radio' name='variant' value='3d'" + (S.variant === "3d" ? " checked" : "") + "><span>full 3D</span></label></div>" +
+      "<span class='hint'>Joint angles are inside angles (180° = straight). 'Side-view plane' is what a side camera and Kinovea see.</span>" +
+      "<div class='scroll'><table class='sel' id='selTable'></table></div>" +
+      "<div class='row'><button class='btn ghost' id='clr'>Clear all</button><button class='btn ghost' id='kn'>Knees + hips</button></div></div>" +
+      "<div style='display:flex;flex-direction:column;gap:10px;min-width:0'><div class='chartbox' id='cbox'><svg id='chart' viewBox='0 0 900 340' role='img' aria-label='Angle graph'></svg><div class='tip' id='tip' hidden></div></div>" +
+      "<div class='row'><label class='fld' style='flex-direction:row;align-items:center;gap:6px'>From (s)<input type='text' id='x0' style='width:80px'></label><label class='fld' style='flex-direction:row;align-items:center;gap:6px'>to (s)<input type='text' id='x1' style='width:80px'></label>" +
+      "<button class='btn ghost' id='zfull'>Full length</button><button class='btn ghost' id='zcur'>Zoom ±5 s around the cursor</button></div>" +
+      "<div class='card' id='readout'><span class='hint'>No point selected yet.</span></div></div></div>";
+    tb.querySelectorAll("[name=variant]").forEach(function (r) { r.onchange = function () { S.variant = r.value; drawSel(); drawChart(); }; });
+    $("#clr").onclick = function () { S.sel = {}; drawSel(); drawChart(); };
+    $("#kn").onclick = function () { S.sel = { knee_L_joint: true, knee_R_joint: true, hip_L_joint: true, hip_R_joint: true }; drawSel(); drawChart(); };
+    $("#zfull").onclick = function () { S.x0 = S.x1 = null; drawChart(); };
+    $("#zcur").onclick = function () { if (S.cur < 0) return; var t = S.ang.t[S.cur]; S.x0 = Math.max(0, t - 5); S.x1 = t + 5; drawChart(); };
+    ["x0", "x1"].forEach(function (k) { $("#" + k).onchange = function () { var a = num($("#x0").value), b = num($("#x1").value); S.x0 = isFinite(a) ? a : null; S.x1 = isFinite(b) ? b : null; drawChart(); }; });
+    var vs = tb.querySelectorAll("video");
+    vs.forEach(function (v, k) {
+      v.addEventListener("timeupdate", function () { if (k === 0 && !v.paused) setCursor(idxForFrame(Math.round(v.currentTime * S.ang.fps)), false, true); });
+      v.addEventListener("play", function () { if (k === 0) vs.forEach(function (o, j) { if (j) o.play().catch(function () {}); }); });
+      v.addEventListener("pause", function () { if (k === 0) vs.forEach(function (o, j) { if (j) o.pause(); }); });
+      v.addEventListener("seeked", function () { if (k === 0) vs.forEach(function (o, j) { if (j && Math.abs(o.currentTime - v.currentTime) > 0.1) o.currentTime = v.currentTime; }); });
+    });
+    drawSel(); drawChart();
+  }
+  function drawSel() {
+    var html = "";
+    var block = function (title, group) {
+      var items = itemsFor(group); if (!items.length) return;
+      html += "<tr><th colspan='3'>" + title + "</th></tr><tr><th></th><th>Left</th><th>Right</th></tr>";
+      items.forEach(function (it) {
+        var sw = "<span class='sw' style='background:" + colorOf(it) + "'></span>";
+        if (it.pair) html += "<tr><td class='lbl' data-row='" + esc(it.key + "|" + it.group) + "'>" + sw + esc(it.label) + "</td><td><input type='checkbox' data-k='" + keyFor(it, "L") + "' aria-label='" + esc(it.label) + " left'" + (S.sel[keyFor(it, "L")] ? " checked" : "") + "></td><td><input type='checkbox' data-k='" + keyFor(it, "R") + "' aria-label='" + esc(it.label) + " right'" + (S.sel[keyFor(it, "R")] ? " checked" : "") + "></td></tr>";
+        else html += "<tr><td class='lbl'>" + sw + esc(it.label) + "</td><td colspan='2'><input type='checkbox' data-k='" + keyFor(it, "") + "' aria-label='" + esc(it.label) + "'" + (S.sel[keyFor(it, "")] ? " checked" : "") + "></td></tr>";
+      });
+    };
+    block("Joint angles (3 points)", "joint"); block("Pipeline angles (used for classification)", "pipeline");
+    var t = $("#selTable"); t.innerHTML = html;
+    t.querySelectorAll("input[data-k]").forEach(function (c) { c.onchange = function () { S.sel[c.getAttribute("data-k")] = c.checked; drawChart(); }; });
+    t.querySelectorAll("td.lbl[data-row]").forEach(function (td) { td.onclick = function () {
+      var p = td.getAttribute("data-row").split("|"), kL = p[0] + "_L_" + p[1], kR = p[0] + "_R_" + p[1], on = !(S.sel[kL] && S.sel[kR]);
+      S.sel[kL] = on; S.sel[kR] = on; drawSel(); drawChart(); }; });
+  }
+  var CH = { W: 900, H: 340, L: 52, R: 14, T: 14, B: 46 };
+  function niceTicks(lo, hi, n) {
+    var span = hi - lo || 1, step = Math.pow(10, Math.floor(Math.log10(span / n))), err = span / n / step;
+    step *= err >= 7 ? 10 : err >= 3 ? 5 : err >= 1.5 ? 2 : 1;
+    var out = []; for (var v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) out.push(+v.toFixed(6)); return out;
+  }
+  function visible() { var A = S.ang, t0 = S.x0 != null ? S.x0 : A.t[0], t1 = S.x1 != null && S.x1 > t0 ? S.x1 : A.t[A.t.length - 1]; return [t0, t1]; }
+  function drawChart() {
+    var A = S.ang, svg = $("#chart"); if (!svg) return;
+    var ser = activeSeries(), v = visible(), t0 = v[0], t1 = v[1];
+    $("#x0").value = S.x0 != null ? S.x0 : ""; $("#x1").value = S.x1 != null ? S.x1 : "";
+    var lo = Infinity, hi = -Infinity, i0 = 0, i1 = A.t.length - 1;
+    while (i0 < i1 && A.t[i0] < t0) i0++; while (i1 > i0 && A.t[i1] > t1) i1--;
+    ser.forEach(function (s) { for (var k = i0; k <= i1; k++) { var y = s.data[k]; if (y != null) { if (y < lo) lo = y; if (y > hi) hi = y; } } });
+    if (!isFinite(lo)) { lo = 0; hi = 180; }
+    var pad = (hi - lo) * 0.08 || 5; lo -= pad; hi += pad;
+    var X = function (t) { return CH.L + (t - t0) / (t1 - t0 || 1) * (CH.W - CH.L - CH.R); }, Y = function (y) { return CH.T + (hi - y) / (hi - lo) * (CH.H - CH.T - CH.B); };
+    var ss = A.squat_start_side_s, s = "";
+    niceTicks(lo, hi, 6).forEach(function (y) { s += "<line x1='" + CH.L + "' x2='" + (CH.W - CH.R) + "' y1='" + Y(y) + "' y2='" + Y(y) + "' stroke='var(--line)'/><text x='" + (CH.L - 6) + "' y='" + (Y(y) + 4) + "' text-anchor='end' font-size='11' fill='var(--muted)' font-family='Consolas,monospace'>" + y + "</text>"; });
+    niceTicks(t0, t1, 8).forEach(function (t) { s += "<line x1='" + X(t) + "' x2='" + X(t) + "' y1='" + CH.T + "' y2='" + (CH.H - CH.B) + "' stroke='var(--line)' stroke-opacity='.5'/><text x='" + X(t) + "' y='" + (CH.H - 28) + "' text-anchor='middle' font-size='11' fill='var(--muted)' font-family='Consolas,monospace'>" + (+t.toFixed(2)) + " s</text>" + (ss != null ? "<text x='" + X(t) + "' y='" + (CH.H - 14) + "' text-anchor='middle' font-size='10' fill='var(--muted)' font-family='Consolas,monospace'>video " + fmtT(ss + t) + "</text>" : ""); });
+    ser.forEach(function (sr) {
+      var d = "", pen = false;
+      for (var k = i0; k <= i1; k++) { var y = sr.data[k]; if (y != null) { d += (pen ? "L" : "M") + X(A.t[k]).toFixed(1) + " " + Y(y).toFixed(1); pen = true; } else pen = false; }
+      s += "<path d='" + d + "' fill='none' stroke='" + sr.color + "' stroke-width='2' " + (sr.dash ? "stroke-dasharray='" + sr.dash + "'" : "") + "/>";
+    });
+    if (!ser.length) s += "<text x='" + (CH.W / 2) + "' y='" + (CH.H / 2) + "' text-anchor='middle' fill='var(--muted)' font-size='14'>Tick an angle on the left.</text>";
+    s += "<line id='cur' x1='0' x2='0' y1='" + CH.T + "' y2='" + (CH.H - CH.B) + "' stroke='var(--ink)' stroke-width='1.2' visibility='hidden'/>";
+    svg.innerHTML = s;
+    S.sc = { X: X, t0: t0, t1: t1, ser: ser };
+    var box = svg;
+    var at = function (e) { var r = box.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * CH.W, t = t0 + (px - CH.L) / (CH.W - CH.L - CH.R) * (t1 - t0); t = Math.max(t0, Math.min(t1, t)); return idxForFrame(Math.round(t * A.fps)); };
+    box.onpointermove = function (e) { setCursor(at(e), false, false, e); };
+    box.onpointerdown = function (e) { setCursor(at(e), true, false, e); };
+    box.onpointerleave = function () { if (S.cur >= 0) setCursor(S.cur, false, true); };
+    if (S.cur >= 0) setCursor(S.cur, false, true);
+  }
+  function setCursor(idx, seek, noTip, ev) {
+    var A = S.ang; if (!A || !S.sc || idx < 0) return;
+    S.cur = idx; var t = A.t[idx], cur = $("#cur"); if (!cur) return;
+    var x = S.sc.X(t); cur.setAttribute("x1", x); cur.setAttribute("x2", x); cur.setAttribute("visibility", t >= S.sc.t0 && t <= S.sc.t1 ? "visible" : "hidden");
+    var ss = A.squat_start_side_s;
+    var head = "<b>t " + t.toFixed(2) + " s</b> · frame " + A.frame[idx] + (ss != null ? " · side-video time <b>" + fmtT(ss + t) + "</b>" : "");
+    var lines = S.sc.ser.map(function (sr) { var y = sr.data[idx]; return "<div><span style='color:" + sr.color + "'>" + (sr.dash ? "- -" : "—") + "</span> " + esc(sr.label) + ": <b>" + (y == null ? "n/a" : y.toFixed(1) + "°") + "</b></div>"; }).join("");
+    $("#readout").innerHTML = "<div>" + head + "</div>" + lines;
+    var tip = $("#tip"), cb = $("#cbox");
+    if (!noTip && ev) { tip.hidden = false; tip.innerHTML = "<div>" + head + "</div>" + lines; var r = cb.getBoundingClientRect(), left = ev.clientX - r.left + 14; if (left + 280 > r.width) left = ev.clientX - r.left - 290; tip.style.left = Math.max(4, left) + "px"; tip.style.top = Math.max(4, ev.clientY - r.top - 20) + "px"; } else tip.hidden = true;
+    if (seek) document.querySelectorAll("video").forEach(function (v) { v.currentTime = t; });
+  }
+
+  /* ================= Kinovea compare tab ================= */
+  var MOMENTS = ["Standing, start", "Squat hold 1", "Squat hold 2", "Squat hold 3", "Squat hold 4", "Squat hold 5", "Squat hold 6", "Standing, later 1", "Standing, later 2", "Extra (optional)"];
+  var JNT = ["knee", "hip", "trunk", "shoulder", "elbow"];
+  function tabKinovea() {
+    var tb = $("#tabBody");
+    if (S.info.status !== "done" || !S.ang) { tb.innerHTML = "<div class='card'>Available when the run has finished.</div>"; return; }
+    var K = S.kin && S.kin.run === S.info.name ? S.kin : (S.kin = { run: S.info.name, side: "R", start: "", rows: {} });
+    var saved = S.info.kinovea; if (saved && !K.loaded) { K.side = saved.side || "R"; K.start = saved.start || ""; K.rows = saved.rows || {}; K.loaded = true; }
+    if (!K.start) K.start = "0";
+    var rows = "";
+    MOMENTS.forEach(function (m, r) {
+      rows += "<tr><td style='white-space:nowrap'>" + (r + 1) + " · " + m + "</td><td><input type='text' data-r='" + r + "' data-c='time' placeholder='0:12.50' style='min-width:90px'></td><td class='sec' data-sec='" + r + "'></td>";
+      JNT.forEach(function (c) { rows += "<td><input type='text' inputmode='decimal' data-r='" + r + "' data-c='" + c + "' aria-label='" + c + " " + m + "'></td>"; });
+      rows += "</tr>";
+    });
+    tb.innerHTML =
+      "<div class='card'><h3>How to measure in Kinovea</h3><ul style='margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:5px'>" +
+      "<li><b>Open</b> <code>processed_videos\\side_synced.mp4</code> of this run in Kinovea (not the original camera file). Keep the box below at 0.</li>" +
+      "<li><b>Click Suggest moments</b>, then in Kinovea jump to each time. Only still holds are suggested.</li>" +
+      "<li><b>Knee</b> = Angle tool: click hip tape, then <b>knee tape (corner)</b>, then ankle tape. <b>Hip</b> = shoulder tape, <b>hip tape (corner)</b>, knee tape. A straight leg reads about 180°. If Kinovea shows the other side (190° instead of 170°), type 360 minus it.</li>" +
+      "<li><b>Trunk lean</b> = angle between the line hip tape to shoulder tape and the vertical. Standing is about 0-5°.</li>" +
+      "<li>Shoulder and elbow are optional. Everything auto-saves; press <b>Save now</b> to be sure, and <b>Download CSV</b> for your report.</li></ul></div>" +
+      "<div class='card'><h3>Measurement sheet</h3><div class='row'><label class='fld' style='flex-direction:row;align-items:center;gap:6px'>Taped side<select id='kside' style='width:auto'><option value='R'>right</option><option value='L'>left</option></select></label>" +
+      "<label class='fld' style='flex-direction:row;align-items:center;gap:6px'>Kinovea video starts at (s): 0 if you open side_synced.mp4<input type='text' id='kstart' style='width:90px'></label>" +
+      "<button class='btn' id='ksug'>Suggest moments</button><button class='btn' id='ksave'>Save now</button><button class='btn' id='kdl'>Download CSV</button><span class='hint' id='kmsg'></span></div>" +
+      "<div class='scroll'><table class='sheet'><thead><tr><th>Moment</th><th>Kinovea time</th><th>= s</th><th>Knee °</th><th>Hip °</th><th>Trunk lean °</th><th>Shoulder ° (opt.)</th><th>Elbow ° (opt.)</th></tr></thead><tbody>" + rows + "</tbody></table></div>" +
+      "<div id='ksugg'></div></div><div id='kres' class='card'></div>";
+    $("#kside").value = K.side; $("#kstart").value = K.start;
+    $("#kside").onchange = function () { K.side = this.value; kCompute(); };
+    $("#kstart").oninput = function () { K.start = this.value; kCompute(); };
+    tb.querySelectorAll("input[data-r]").forEach(function (inp) {
+      var r = inp.getAttribute("data-r"), c = inp.getAttribute("data-c"); inp.value = (K.rows["m" + r] && K.rows["m" + r][c]) || "";
+      inp.oninput = function () { K.rows["m" + r] = K.rows["m" + r] || {}; K.rows["m" + r][c] = inp.value; kCompute(); };
+    });
+    $("#ksug").onclick = kSuggest;
+    $("#ksave").onclick = function () { kCompute(true); };
+    $("#kdl").onclick = function () {
+      var csv = K.lastCsv || "no complete rows yet", a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = S.run + "_pipeline_vs_kinovea.csv"; a.click();
+    };
+    kCompute();
+  }
+  function kSeries(joint) { var A = S.ang, side = S.kin.side; return joint === "trunk" ? A.series.trunk_lean_sag : A.series[joint + "_" + side + "_sag"]; }
+  var kSaveTimer = null;
+  function kSave(resultText, pairsCsv, now) {
+    clearTimeout(kSaveTimer);
+    kSaveTimer = setTimeout(function () {
+      var K = S.kin; api("/api/runs/" + S.run + "/kinovea", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sheet: { side: K.side, start: K.start, rows: K.rows }, result_text: resultText, pairs_csv: pairsCsv }) }).then(function () { var m = $("#kmsg"); if (m) m.textContent = "saved (run folder, kinovea subfolder): " + S.run; }).catch(function () {});
+    }, now ? 0 : 1200);
+  }
+  function kSuggest() {
+    var A = S.ang, K = S.kin, msg = $("#kmsg"), ss = num(K.start), fps = A.fps, k = kSeries("knee");
+    if (!isFinite(ss)) { msg.textContent = "type the time the squat part starts in the side video first"; return; }
+    var N = k.length, half = Math.round(fps / 2), still = new Array(N);
+    for (var q = 0; q < N; q++) {
+      var lo = Infinity, hi = -Infinity, ok = true;
+      for (var w = Math.max(0, q - half); w <= Math.min(N - 1, q + half); w++) { var v = k[w]; if (v == null) { ok = false; break; } if (v < lo) lo = v; if (v > hi) hi = v; }
+      still[q] = ok && (hi - lo) < 6;
+    }
+    var stands = [], squats = [], q2 = 0;
+    while (q2 < N) {
+      if (!still[q2]) { q2++; continue; }
+      var e = q2; while (e + 1 < N && still[e + 1]) e++;
+      if (e - q2 + 1 >= Math.round(1.5 * fps)) { var sum = 0; for (var z = q2; z <= e; z++) sum += k[z]; var mean = sum / (e - q2 + 1), mid = Math.round((q2 + e) / 2); if (mean > 150) stands.push(mid); else if (mean < 130) squats.push(mid); }
+      q2 = e + 1;
+    }
+    var spread = function (a, n) { if (a.length <= n) return a.slice(); var r = []; for (var j = 0; j < n; j++) r.push(a[Math.round(j * (a.length - 1) / (n - 1))]); return r; };
+    var pick = []; if (stands.length) pick.push([0, stands[0]]);
+    spread(squats, 6).forEach(function (ix, j) { pick.push([1 + j, ix]); }); spread(stands.slice(1), 2).forEach(function (ix, j) { pick.push([7 + j, ix]); });
+    if (!pick.length) { msg.textContent = "no still holds found: look at the graph and pick flat parts by hand"; return; }
+    var html = "<p class='hint' style='margin:8px 0'>Found <b>" + squats.length + "</b> squat holds and <b>" + stands.length + "</b> standing holds (still for 1.5 s or more). These times were put in the sheet: jump to them in Kinovea.</p><table><tr><th>Row</th><th>Moment</th><th>Kinovea time</th><th>frame</th><th>knee °</th></tr>";
+    pick.forEach(function (p) {
+      var t = ss + A.t[p[1]]; K.rows["m" + p[0]] = K.rows["m" + p[0]] || {}; K.rows["m" + p[0]].time = fmtT(t);
+      var inp = document.querySelector("input[data-r='" + p[0] + "'][data-c='time']"); if (inp) inp.value = fmtT(t);
+      html += "<tr><td>" + (p[0] + 1) + "</td><td>" + MOMENTS[p[0]] + "</td><td><b>" + fmtT(t) + "</b></td><td>" + A.frame[p[1]] + "</td><td>" + k[p[1]].toFixed(0) + "</td></tr>";
+    });
+    $("#ksugg").innerHTML = html + "</table>"; msg.textContent = ""; kCompute();
+  }
+  function kStats(pairs) {
+    var n = pairs.length; if (!n) return null;
+    var e = pairs.map(function (p) { return p.pip - p.kin; }), mean = e.reduce(function (a, b) { return a + b; }, 0) / n;
+    var sd = n > 1 ? Math.sqrt(e.reduce(function (a, b) { return a + (b - mean) * (b - mean); }, 0) / (n - 1)) : NaN;
+    var mae = e.reduce(function (a, b) { return a + Math.abs(b); }, 0) / n;
+    var mp = pairs.reduce(function (a, p) { return a + p.pip; }, 0) / n, mk = pairs.reduce(function (a, p) { return a + p.kin; }, 0) / n, sxy = 0, sxx = 0, syy = 0;
+    pairs.forEach(function (p) { sxy += (p.pip - mp) * (p.kin - mk); sxx += (p.pip - mp) * (p.pip - mp); syy += (p.kin - mk) * (p.kin - mk); });
+    return { n: n, bias: mean, sd: sd, lo: mean - 1.96 * sd, hi: mean + 1.96 * sd, mae: mae, r: n > 2 && sxx > 0 && syy > 0 ? sxy / Math.sqrt(sxx * syy) : NaN };
+  }
+  function f1(x, sign) { return isFinite(x) ? (sign && x >= 0 ? "+" : "") + x.toFixed(1) : "n/a"; }
+  function kPairs(shift) {
+    var A = S.ang, K = S.kin, ss = num(K.start), pairs = [], used = 0, total = 0;
+    MOMENTS.forEach(function (m, r) {
+      var row = K.rows["m" + r]; if (!row) return;
+      if (!JNT.some(function (c) { return isFinite(num(row[c])); })) return;
+      total++; var t = parseTime(row.time); if (t === null || !isFinite(ss)) return;
+      var f = Math.round((t - ss) * A.fps) + (shift || 0); if (f < A.frame[0] || f > A.frame[A.frame.length - 1]) return;
+      var idx = idxForFrame(f); if (A.frame[idx] !== f) return; used++;
+      JNT.forEach(function (c) {
+        var kin = num(row[c]); if (!isFinite(kin)) return; var sr = kSeries(c), pip = sr ? sr[idx] : null;
+        if (pip != null) pairs.push({ joint: c, kin: kin, pip: pip, moment: m });
+        var s3 = c === "trunk" ? A.series.trunk_lean_3d : A.series[c + "_" + K.side + "_3d"];
+        if (s3 && s3[idx] != null && (c === "knee" || c === "hip" || c === "trunk")) pairs.push({ joint: c + " (full 3D)", kin: kin, pip: s3[idx], moment: m });
+      });
+    });
+    return { pairs: pairs, used: used, total: total };
+  }
+  function baPlot(joint, pairs, st) {
+    var W = 320, H = 230, L = 46, R = 12, T = 22, B = 36;
+    var xs = pairs.map(function (p) { return (p.pip + p.kin) / 2; }), ys = pairs.map(function (p) { return p.pip - p.kin; });
+    var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs); if (x1 - x0 < 10) { x0 -= 5; x1 += 5; }
+    var yl = Math.max(5, Math.ceil(Math.max(Math.abs(st.lo || 0), Math.abs(st.hi || 0), Math.max.apply(null, ys.map(Math.abs))) / 5) * 5);
+    var X = function (v) { return L + (v - x0) / (x1 - x0) * (W - L - R); }, Y = function (v) { return T + (yl - v) / (2 * yl) * (H - T - B); };
+    var s = "<svg viewBox='0 0 " + W + " " + H + "'><text x='" + L + "' y='14' font-size='11' font-family='Consolas,monospace' fill='var(--ink)'>" + esc(joint) + "  bias " + f1(st.bias, 1) + "°</text>";
+    [-yl, -yl / 2, 0, yl / 2, yl].forEach(function (v) { s += "<line x1='" + L + "' x2='" + (W - R) + "' y1='" + Y(v) + "' y2='" + Y(v) + "' stroke='var(--line)'/><text x='" + (L - 6) + "' y='" + (Y(v) + 4) + "' text-anchor='end' font-size='10' font-family='Consolas,monospace' fill='var(--muted)'>" + v + "</text>"; });
+    [[st.bias, "var(--ink)", ""], [st.lo, "var(--bad)", "4 3"], [st.hi, "var(--bad)", "4 3"]].forEach(function (l) { if (isFinite(l[0])) s += "<line x1='" + L + "' x2='" + (W - R) + "' y1='" + Y(l[0]) + "' y2='" + Y(l[0]) + "' stroke='" + l[1] + "' stroke-width='1.5' stroke-dasharray='" + l[2] + "'/>"; });
+    pairs.forEach(function (p) { s += "<circle cx='" + X((p.pip + p.kin) / 2) + "' cy='" + Y(p.pip - p.kin) + "' r='3.6' fill='var(--accent)' fill-opacity='.75'/>"; });
+    return s + "<text x='" + ((L + W - R) / 2) + "' y='" + (H - 6) + "' text-anchor='middle' font-size='10' font-family='Consolas,monospace' fill='var(--muted)'>mean of both (°)</text><text x='12' y='" + (H / 2) + "' font-size='10' font-family='Consolas,monospace' fill='var(--muted)' transform='rotate(-90 12 " + (H / 2) + ")' text-anchor='middle'>pipeline − Kinovea (°)</text></svg>";
+  }
+  function kCompute(now) {
+    var K = S.kin, A = S.ang;
+    document.querySelectorAll("[data-sec]").forEach(function (td) { var row = K.rows["m" + td.getAttribute("data-sec")], t = row ? parseTime(row.time) : null; td.textContent = t === null ? "" : t.toFixed(2) + " s"; });
+    var P = kPairs(0), box = $("#kres"); if (!box) return;
+    if (!P.pairs.length) { box.innerHTML = "<h3>Result</h3><p class='hint'>Fill the time and at least one angle in a few rows, and give the squat start time. The error table appears here.</p>"; return; }
+    var by = {}; P.pairs.forEach(function (p) { (by[p.joint] = by[p.joint] || []).push(p); });
+    var order = JNT.concat(["knee (full 3D)", "hip (full 3D)", "trunk (full 3D)"]).filter(function (j) { return by[j]; });
+    var txt = ["Pipeline minus Kinovea, degrees (" + (K.side === "R" ? "right" : "left") + " side, side-view plane), " + P.used + " moments, run " + S.run], table = "<table><tr><th>Joint</th><th class='num'>n</th><th class='num'>bias °</th><th class='num'>SD °</th><th class='num'>95% low</th><th class='num'>95% high</th><th class='num'>MAE °</th><th class='num'>r</th></tr>", says = "", plots = "";
+    order.forEach(function (j) {
+      var st = kStats(by[j]);
+      table += "<tr><td>" + esc(j) + "</td><td class='num'>" + st.n + "</td><td class='num'>" + f1(st.bias, 1) + "</td><td class='num'>" + f1(st.sd) + "</td><td class='num'>" + f1(st.lo, 1) + "</td><td class='num'>" + f1(st.hi, 1) + "</td><td class='num'>" + f1(st.mae) + "</td><td class='num'>" + (isFinite(st.r) ? st.r.toFixed(2) : "n/a") + "</td></tr>";
+      txt.push(j + ": n=" + st.n + ", bias " + f1(st.bias, 1) + ", SD " + f1(st.sd) + ", 95% limits " + f1(st.lo, 1) + " to " + f1(st.hi, 1) + ", MAE " + f1(st.mae) + ", r " + (isFinite(st.r) ? st.r.toFixed(2) : "n/a"));
+      says += "<div class='note' style='margin:4px 0'><b>" + esc(j) + ":</b> the pipeline reads " + (st.bias >= 0 ? f1(st.bias) + "° higher" : f1(-st.bias) + "° lower") + " than Kinovea on average, and about 95 % of the differences lie between " + f1(st.lo, 1) + "° and " + f1(st.hi, 1) + "°." + (st.n < 8 ? " Only " + st.n + " pairs: a rough guide." : "") + "</div>";
+      if (st.n >= 2) plots += baPlot(j, by[j], st);
+    });
+    var sh = [-2, -1, 0, 1, 2].map(function (s) { var Q = kPairs(s), m = {}; Q.pairs.forEach(function (p) { if (JNT.indexOf(p.joint) >= 0) (m[p.joint] = m[p.joint] || []).push(p); }); var maes = Object.keys(m).map(function (k) { return kStats(m[k]).mae; }); return (s > 0 ? "+" : "") + s + " fr: " + (maes.length ? (maes.reduce(function (a, b) { return a + b; }, 0) / maes.length).toFixed(2) + "°" : "n/a"); });
+    var csv = "moment,joint,kinovea_deg,pipeline_deg,difference_deg\n" + P.pairs.map(function (p) { return [p.moment, p.joint, p.kin.toFixed(2), p.pip.toFixed(2), (p.pip - p.kin).toFixed(2)].join(","); }).join("\n");
+    box.innerHTML = "<h3>Result <span class='hint'>(error = pipeline − Kinovea; " + P.used + " of " + P.total + " moments used)</span></h3><div class='scroll'>" + table + "</table></div>" + says +
+      "<p class='hint'><b>bias</b> = the constant error. <b>95% low / high</b> = the ± range. Timing check, average MAE if the alignment shifted: " + sh.join(" · ") + " (in still holds these should be close).</p><div class='plots'>" + plots + "</div>" +
+      "<div class='row'><button class='btn' id='kcopy'>Copy result text</button></div>";
+    $("#kcopy").onclick = function () { copyText(txt.join("\n"), this); };
+    K.lastCsv = csv; kSave(txt.join("\n"), csv, now);
+  }
+
+  refreshRuns();
+  route();
+})();
+</script>
+</body>
+</html>

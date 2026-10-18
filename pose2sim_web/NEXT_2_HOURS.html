@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Next 2 hours: Pose2Sim vs Kinovea</title>
+<style>
+body{font:16px/1.5 system-ui,sans-serif;max-width:820px;margin:24px auto;padding:0 16px;color:#1b1f24;background:#fff}
+h1{font-size:22px}h2{font-size:18px;margin-top:28px;border-top:1px solid #ddd;padding-top:14px}
+.t{display:inline-block;background:#e8f0fe;color:#174ea6;border-radius:10px;padding:1px 9px;font-size:13px;margin-left:6px}
+pre{background:#f4f5f7;border:1px solid #d8dbe0;border-radius:6px;padding:10px;overflow:auto;position:relative}
+button{position:absolute;right:6px;top:6px;font-size:12px;padding:3px 9px;cursor:pointer}
+.ok{background:#e6f4ea;border-left:4px solid #1e8e3e;padding:8px 12px}.warn{background:#fef7e0;border-left:4px solid #f9ab00;padding:8px 12px}
+table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 9px;text-align:left}
+label{display:block;margin:4px 0}
+@media(prefers-color-scheme:dark){body{background:#14161a;color:#e6e8eb}pre{background:#1e2127;border-color:#333}.t{background:#1c2b4a;color:#9ec1ff}.ok{background:#16301f}.warn{background:#38300f}td,th{border-color:#444}}
+</style></head><body>
+<h1>Next 2 hours: finish the Pose2Sim vs Kinovea comparison</h1>
+
+<div class="ok"><b>Good news: nothing needs to be re-run.</b> The 3-hour run did finish: 3382 frames, 11 reps, all angles are saved.
+The "error" came after it was done (Windows crash code 3221226505 = 0xC0000409 while the program was closing). The website then skipped building
+its viewer file. I fixed the website and rebuilt that file for your run <code>squat_test_1018-154709</code>.</div>
+
+<h2>Why it took 3 hours (so you can say it in the report)</h2>
+<table>
+<tr><th>Stage</th><th>Time</th></tr>
+<tr><td>Reading videos, sync, calibration</td><td>about 7 min</td></tr>
+<tr><td><b>Pose estimation (RTMPose)</b></td><td><b>2 h 28 min</b> (88 % of everything)</td></tr>
+<tr><td>Triangulation + filtering + angles</td><td>about 8 min</td></tr>
+</table>
+<p>Reason: CPU only (no NVIDIA GPU), 2 videos x 3446 frames of 1920x1080, "balanced" model, and the whole 115 s was processed although you need only about 10 moments.
+For any future run: cut the video to the part you need (for example the first 3 reps, 20 s = 6 times faster), or use the lab GPU (about 10 min), or mode "lightweight". Do not run again for this study.</p>
+
+<h2>Step 1: open your run <span class="t">2 min</span></h2>
+<p>Close the old website window, then start it again (it must be restarted to get the fix):</p>
+<pre><button onclick="c(this)">Copy</button>powershell -ExecutionPolicy Bypass -File "C:\Current_Mini_Project_Working\MarkerLess-Squat-Analysis-and-Real-Time-Posture-Correction-for-Injury-Prevention-using-Deep-Learning\pose2sim_web\start.ps1"</pre>
+<p>Open the run <b>squat_test_1018-154709</b>. Status should say done. Angles tab shows the curves.</p>
+
+<h2>Step 2: choose the moments <span class="t">10 min</span></h2>
+<p>Compare tab -> <b>Suggest moments</b>. Use <b>still holds only</b> (standing 3 s, bottom hold 5 s). Hand measurement on a moving frame is blurred and gives wrong error.
+Take <b>9 moments</b>: 3 standing, 3 mid-depth (descent holds or slowest frames), 3 at the bottom. Spread over different reps, not all in one.
+Write down the <b>frame numbers</b>.</p>
+
+<h2>Step 3: measure in Kinovea <span class="t">50 min</span></h2>
+<p>Open <b>one video only</b>:</p>
+<pre><button onclick="c(this)">Copy</button>C:\Current_Mini_Project_Working\MarkerLess-Squat-Analysis-and-Real-Time-Posture-Correction-for-Injury-Prevention-using-Deep-Learning\pose2sim_web\data\squat_test_1018-154709\processed_videos\side_synced.mp4</pre>
+<p>Why this file: it starts exactly at the pipeline's frame 0, so Kinovea frame number = pipeline frame number. Do not use the original camera file (offset ~19 s).</p>
+<ol>
+<li>Go to the frame. Angle tool: click hip tape, knee tape, ankle tape (vertex in the middle) -> read the angle.</li>
+<li>Measure <b>knee, hip, ankle</b> (3 angles) and trunk lean vs vertical if time allows. 9 moments x 3 = 27 values, about 1.5 min each.</li>
+<li>Always the same leg (the taped side facing the side camera). Pick the matching pipeline column: <code>knee_R_sag</code>, <code>hip_R_sag</code>, <code>ankle_R_sag</code>
+(or L if the left leg faced the camera). Kinovea is 2D, so <b>_sag</b> (projected on the side plane) is the fair comparison; also report <b>_3d</b> as a second column.</li>
+<li><b>Re-measure 9 frames x 3 angles a second time</b> (after a break, without looking at the first values) <span class="t">20 min</span>. This gives the human error of the "ground truth" itself.</li>
+</ol>
+
+<h2>Step 4: compute errors <span class="t">10 min</span></h2>
+<p>Compare tab -> paste/enter your values. It gives bias, SD, 95 % limits, MAE and the Bland-Altman plot, saved in the run folder. Take a screenshot for the report.</p>
+
+<h2>Step 5: how to report the error range (for report / paper)</h2>
+<table>
+<tr><th>What</th><th>How</th></tr>
+<tr><td>Bias (mean error)</td><td>mean(Pose2Sim - Kinovea), in degrees, per joint</td></tr>
+<tr><td>95 % limits of agreement</td><td>bias +/- 1.96 x SD (Bland-Altman). This is the "error range" a reader wants.</td></tr>
+<tr><td>MAE and RMSE</td><td>mean of |error| and square root of mean error squared, per joint</td></tr>
+<tr><td>Ground-truth noise</td><td>SD between your two Kinovea rounds (and Kinovea's own +/-1 to 2 deg). If the system error is not much larger than this, say so.</td></tr>
+<tr><td>Optional</td><td>Pearson r or ICC(2,1) between the two methods, plus a 95 % CI of the bias (bias +/- 1.96 x SD/sqrt(n))</td></tr>
+</table>
+<p><b>Sentence to write:</b> "Pilot validation on one participant, 9 static postures from one trial, two observers' repeated manual Kinovea measurement of taped joints (n = 27 angle pairs). Pose2Sim angles differed by X deg (bias) with 95 % limits of agreement from A to B deg; MAE X deg."</p>
+
+<h2>Limitations to write honestly</h2>
+<ul>
+<li>One participant, one trial, one camera setup: shows feasibility, not general accuracy. Static postures only.</li>
+<li>Kinovea is a manual 2D measurement, not a motion-capture gold standard; it is affected by tape placement and camera perspective.</li>
+<li>Pipeline log: mean reprojection error 3.8 px (about 8.7 mm); lens distortion was not taken into account in triangulation; no limb-swap handling; the 2 cameras were 2.90 m apart at 89 deg.</li>
+<li>Pose keypoints (RTMPose HALPE-26) are not at the tape position, so a small constant bias is expected.</li>
+<li>Calibration: intrinsic RMS about 0.35 px; extrinsic from a board lying on the floor.</li>
+</ul>
+
+<h2>Time plan (about 1 h 40 min)</h2>
+<label><input type="checkbox"> Step 1 restart site, open run (2 min)</label>
+<label><input type="checkbox"> Step 2 choose 9 frames (10 min)</label>
+<label><input type="checkbox"> Step 3 Kinovea round 1 (50 min)</label>
+<label><input type="checkbox"> Step 3 Kinovea round 2 repeat (20 min)</label>
+<label><input type="checkbox"> Step 4 numbers + plot (10 min)</label>
+<label><input type="checkbox"> Screenshots + write the paragraph (10 min)</label>
+<div class="warn">If time runs short: skip the repeat round, but then say "single observer" in the report.</div>
+
+<script>function c(b){var t=b.parentNode.textContent.replace('Copy','').trim();navigator.clipboard.writeText(t);b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1200)}</script>
+</body></html>
