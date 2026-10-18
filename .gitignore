@@ -44,3 +44,15 @@ CLAUDE.md
 
 # Model hand-off for the AI lead (shared separately)
 ai_lead_handoff/
+
+# Research: heavy artifacts, re-created by running research/notebooks (dataset files, per-fold runs, checkpoints, weights)
+research/data/
+research/results/02_model_comparison/cv/
+research/results/03_ablation/runs/
+research/results/run_notebooks_*.txt
+research/**/*.pt
+research/**/*.joblib
+research/**/*.npz
+
+# Hugging Face Space: the upload folder is assembled by hf_space/build_space.py
+hf_space/upload/

@@ -1,0 +1,11 @@
+| model          | name                |   macro_f1 |   macro_f1_std |   accuracy |   rec_macro_f1 |     params |   alpha_drop |   random_drop |   median_best_epoch |   minutes |   runs | group              |
+|:---------------|:--------------------|-----------:|---------------:|-----------:|---------------:|-----------:|-------------:|--------------:|--------------------:|----------:|-------:|:-------------------|
+| cnn_lstm       | CNN-LSTM            |      0.758 |          0.108 |      0.775 |          0.777 | 155398.000 |        0.023 |         0.004 |              13.000 |     1.500 |     15 | neural             |
+| cnn1d          | 1D-CNN              |      0.747 |          0.089 |      0.762 |          0.763 | 206598.000 |        0.054 |         0.006 |              10.000 |     1.100 |     15 | neural             |
+| tcn            | TCN                 |      0.734 |          0.122 |      0.750 |          0.744 | 118598.000 |        0.050 |         0.008 |              10.000 |     1.500 |     15 | neural             |
+| bigru          | BiGRU               |      0.717 |          0.100 |      0.738 |          0.754 | 168582.000 |        0.031 |         0.001 |              14.000 |     1.200 |     15 | neural             |
+| bilstm         | BiLSTM              |      0.693 |          0.078 |      0.713 |          0.737 | 210054.000 |        0.007 |        -0.001 |              15.000 |     1.300 |     15 | neural             |
+| st_transformer | ST-Transformer      |      0.677 |          0.093 |      0.706 |          0.689 | 289670.000 |        0.011 |         0.003 |               6.000 |    56.400 |     15 | neural             |
+| xgboost        | XGBoost             |      0.527 |          0.053 |      0.546 |          0.564 |    nan     |      nan     |       nan     |             nan     |     0.400 |     15 | classical baseline |
+| random_forest  | Random forest       |      0.508 |          0.052 |      0.529 |          0.517 |    nan     |      nan     |       nan     |             nan     |     0.200 |     15 | classical baseline |
+| logreg         | Logistic regression |      0.460 |          0.078 |      0.478 |          0.470 |    nan     |      nan     |       nan     |             nan     |     0.000 |     15 | classical baseline |

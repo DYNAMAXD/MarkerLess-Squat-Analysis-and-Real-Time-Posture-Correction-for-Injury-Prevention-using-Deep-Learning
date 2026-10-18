@@ -1,0 +1,82 @@
+paths:
+  recordings: C:/Users/dynam/Desktop/Project1/preprocessed_dataset/preprocessed_data
+  key_info: C:/Users/dynam/Desktop/Project1/preprocessed_dataset/Additional_Info/KEY_INFO.xlsx
+  manifest: data/manifest.csv
+  processed: data/processed
+  results: results
+manifest:
+  classes:
+  - correct
+  - insufficient_depth
+  - forward_lean
+  - knee_valgus
+  - knee_varus
+  - heel_lift
+  exclude_persons:
+  - E_PANTS_MALE
+  exclude_ids:
+  - p01
+data:
+  T: 64
+  trim: true
+  trim_frac: 0.1
+  body_frame: true
+  leg_norm: true
+  min_rep_s: 0.5
+  max_rep_s: 10.0
+  max_missing_core: 0.25
+  max_trunk_missing: 0.5
+  inputs: both
+  velocity: true
+  tempo: true
+  view: both
+  joints: all
+  drop_frame_features: []
+cv:
+  n_splits: 5
+  seeds:
+  - 0
+  - 1
+  - 2
+  val_persons: 2
+  train_person_frac: 1.0
+train:
+  epochs: 60
+  batch_size: 64
+  lr: 0.001
+  weight_decay: 0.01
+  label_smoothing: 0.05
+  noise_std: 0.01
+  patience: 20
+  weighting: true
+  bf16: true
+model:
+  d_model: 64
+  dropout: 0.1
+  pooling: attn
+  kernel: 5
+  conv_layers: 3
+  dilated: false
+  rnn_layers: 2
+  tcn_kernel: 3
+  tcn_levels: 4
+  n_blocks: 4
+  n_heads: 4
+  spatial_attn: true
+  temporal_attn: true
+baseline_models:
+- logreg
+- random_forest
+- xgboost
+neural_models:
+- cnn1d
+- bilstm
+- bigru
+- cnn_lstm
+- tcn
+- st_transformer
+alpha_check:
+  frac: 0.1
+final:
+  model: cnn_lstm
+  epochs: 15

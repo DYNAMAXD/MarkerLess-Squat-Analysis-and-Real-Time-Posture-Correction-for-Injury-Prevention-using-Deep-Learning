@@ -1,0 +1,1 @@
+**Best configuration for CNN-LSTM: `full`** (the default settings): macro-F1 0.761 ± 0.106 (default 0.761). Final training length 15 epochs (median best epoch of the folds). Largest drops: side_camera_only (-0.261), world_axes (-0.175), train_persons_33pct (-0.144), angles_only (-0.140).

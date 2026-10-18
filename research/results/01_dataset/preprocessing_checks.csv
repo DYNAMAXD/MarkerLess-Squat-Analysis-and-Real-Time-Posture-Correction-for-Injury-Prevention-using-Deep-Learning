@@ -1,0 +1,20 @@
+group,check,result,value,expected
+values,"no NaN / inf in joints, frame features, tempo",PASS,-,all finite
+values,joint positions within 2.5 leg lengths of the hip,PASS,max 2.48,<= 2.5
+values,joint speed (99th percentile of the per-rep maximum),PASS,11.8 leg lengths/s,< 15
+body frame,knees below the hip at the rep start,PASS,99.0 % of reps,>= 99 %
+body frame,ankles below the knees,PASS,100.0 % of reps,>= 99 %
+body frame,toes in front of the heels (forward axis),PASS,100.0 % of reps,>= 99 %
+body frame,left hip on the left side (lateral axis),PASS,100.0 % of reps,>= 99 %
+body frame,leg length per recording,PASS,0.73-0.98 m,0.60-1.05 m
+trimming,rep starts moving (knee flexion rises within the first 15 %),PASS,0.1 % flat,< 3 %
+trimming,rep ends moving (knee flexion falls within the last 15 %),PASS,0.2 % flat,< 3 %
+trimming,bottom of the squat inside the rep (10-90 %),PASS,median at 52 %,10-90 %
+trimming,squat depth (max - min knee flexion) at least 30 deg,PASS,99.8 % of reps,> 97 %
+tempo,descent + ascent = duration,PASS,-,equal
+tempo,duration 0.5-10 s after trimming,PASS,1.07-4.04 s,0.5-10 s
+class signatures,knee_valgus: largest inward knee offset,PASS,knee_valgus 0.063; next 0.004,max
+class signatures,knee_varus: largest outward knee offset,PASS,knee_varus -0.177; next -0.088,min
+class signatures,heel_lift: highest heel above the toe,PASS,heel_lift 0.096; next 0.051,max
+class signatures,insufficient_depth: least knee flexion,PASS,insufficient_depth 91.332; next 100.700,min
+class signatures,insufficient_depth: smallest hip drop,PASS,insufficient_depth 0.321; next 0.367,min

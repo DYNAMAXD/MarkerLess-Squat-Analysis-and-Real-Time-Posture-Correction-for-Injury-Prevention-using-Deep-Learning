@@ -1,7 +1,7 @@
 """
 product_predictions.py -- the predictions.json contract of the final product (see model_build_instructions.md, section 9).
 
-The trained squat model writes predictions.json itself (squat_model.predict). Until it exists, the product writes
+The trained squat model writes predictions.json itself (research/squat_research/predict.py). Until it exists, the product writes
   - "inactive" predictions: the reps found by the preprocessing, without errors (model_active = false), or
   - demo predictions on request: made-up errors and attention so the whole page can be tried out (demo = true;
     the page shows a DEMO banner). They say nothing about the squat.
@@ -19,7 +19,7 @@ from pathlib import Path
 
 import numpy as np
 
-CLASSES = ["correct", "insufficient_depth", "forward_lean", "knee_valgus", "knee_varus", "heel_lift", "abnormal_tempo"]
+CLASSES = ["correct", "insufficient_depth", "forward_lean", "knee_valgus", "knee_varus", "heel_lift"]   # the model's classes (abnormal_tempo dropped)
 UNCERTAIN_BELOW = 0.5
 WINDOW = 10      # frames: attention is averaged in windows of this many frames ...
 SIGMA = 5.0      # ... then Gaussian-smoothed (frames)
@@ -128,12 +128,12 @@ def demo_predictions(folder, seed=7):
 
 def rep_results_csv(pred):
     cols = ["rep", "start_s", "end_s", "start_frame", "end_frame", "duration_s", "predicted_error", "confidence",
-            *[f"p_{c}" for c in CLASSES], "alpha_peak_s", "uncertain"]
+            *[f"p_{c}" for c in pred.get("classes") or CLASSES], "alpha_peak_s", "uncertain"]
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator="\n")
     w.writerow(cols)
     for r in pred["reps"]:
-        probs = r.get("probs") or [None] * len(CLASSES)
+        probs = r.get("probs") or [None] * len(pred.get("classes") or CLASSES)
         peak = None
         if r.get("alpha_frames"):
             peak = round(r["start_s"] + int(np.argmax(r["alpha_frames"])) / pred["fps"], 3)
@@ -153,11 +153,33 @@ def user_reps_csv(pred):
     return buf.getvalue()
 
 
+def session_view(folder, smpl=True, warnings=()):
+    """Everything the results page needs about a finished session (except the large files): the Flask app's
+    /api/sessions/<id>/data, and viewer_data.json of the static viewer (hf_space/app.py)."""
+    d = Path(folder)
+    sess = load_json(d / "session.json", {}) or {}
+    res = load_json(d / "results.json", {}) or {}
+    pred = load_json(d / "predictions.json")
+    if pred is None and res:
+        pred = inactive_predictions(d)
+    reps0, fps, n_frames = session_reps(d) if res else ([], 29.97, 0)
+    bottoms = {r["rep"]: r["bottom_frame"] for r in reps0}
+    for r in (pred or {}).get("reps", []):
+        r["bottom_frame"] = min(max(bottoms.get(r["rep"], (r["start_frame"] + r["end_frame"]) // 2), r["start_frame"]), r["end_frame"])
+    mesh = load_json(d / "mesh" / "mesh.json") if (d / "mesh" / "done.txt").exists() else None
+    return {"id": d.name, "name": sess.get("name", d.name), "created": sess.get("created", ""),
+            "summary": sess.get("summary") or (summary(d, pred) if pred else None),
+            "fps": fps, "n_frames": n_frames, "predictions": pred, "mesh": mesh,
+            "smpl": smpl, "videos": [v for v in ("front", "side") if (d / f"{v}.mp4").exists()],
+            "warnings": list(warnings),
+            "sync": {k: (res.get("sync") or {}).get(k) for k in ("reliable", "offset_s")}}
+
+
 def summary(folder, pred):
     """Numbers for the session header and the history page."""
     res = load_json(Path(folder) / "results.json", {})
     analysed = [r for r in pred["reps"] if r.get("label")]
-    counts = {c: sum(r["label"] == c for r in analysed) for c in CLASSES}
+    counts = {c: sum(r["label"] == c for r in analysed) for c in pred.get("classes") or CLASSES}
     errs = {c: n for c, n in counts.items() if c != "correct" and n}
     depth = [t.get("squat_depth_knee_deg_bottom") for t in res.get("table") or []]
     depth = [d for d in depth if isinstance(d, (int, float))]

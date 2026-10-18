@@ -54,6 +54,8 @@ FILES_OK = {"front.mp4", "side.mp4", "mesh/verts.bin", "predictions.json", "resu
 ZIP_FILES = ["rep_results.csv", "predictions.json", "angles.csv", "advancedangles.csv", "points3d.trc", "front.mp4",
              "side.mp4", "calibration.toml", "log.txt"]
 MAX_UPLOAD = 8 * 1024 ** 3
+# PRODUCT_ALLOW_PATHS=0 (hosted, e.g. the Hugging Face Space): uploads only, no paths of files on the server
+ALLOW_PATHS = os.environ.get("PRODUCT_ALLOW_PATHS", "1") != "0"
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD
@@ -117,13 +119,19 @@ def _all_jobs():
                 yield kind, d
 
 
+def _session_camera(d):
+    return (PL.read_json(d / "session.json", {}) or {}).get("camera")
+
+
 def _queue_loop():
     while True:
         try:
             with LOCK:
                 jobs = [(k, d, job_status(k, d)) for k, d in _all_jobs()]
                 if not any(st.get("state") == "running" for _, _, st in jobs):
-                    queued = sorted((st.get("queued_at", 0), k, d) for k, d, st in jobs if st.get("state") == "queued")
+                    busy_cams = {d.name for k, d, st in jobs if k == "camera" and st.get("state") in ("queued", "running")}
+                    queued = sorted((st.get("queued_at", 0), k, d) for k, d, st in jobs if st.get("state") == "queued"
+                                    and not (k == "session" and _session_camera(d) in busy_cams))  # calibration first
                     if queued:
                         _, kind, d = queued[0]
                         PROCS[(kind, d.name)] = subprocess.Popen(
@@ -161,7 +169,7 @@ def save_video(field, dest_dir, stem):
         dest = dest_dir / f"{stem}{Path(f.filename).suffix.lower() or '.mp4'}"
         f.save(dest)
         return str(dest)
-    p = request.form.get(f"{field}_path", "").strip().strip('"').strip("'")
+    p = request.form.get(f"{field}_path", "").strip().strip('"').strip("'") if ALLOW_PATHS else ""
     if p:
         if not Path(p).is_file():
             raise ValueError(f"File not found: {p}")
@@ -178,6 +186,11 @@ def index():
 @app.get("/favicon.ico")
 def favicon():
     return Response(status=204)
+
+
+@app.get("/product.js")
+def product_js():
+    return send_from_directory(HERE / "web", "product.js")
 
 
 @app.get("/static/<name>")
@@ -201,7 +214,7 @@ def content():
 def info():
     return jsonify({"model_active": (PL.MODEL_DIR / "model.pt").exists() and PL.MODEL_PY.exists(),
                     "model_dir": str(PL.MODEL_DIR), "smpl": SMPL_PKL.exists(), "pose2sim": bool(PL.P2S_PY),
-                    "pose_mode": PL.POSE_MODE, "templates": [str(f) for f in TEMPLATE_DIRS]})
+                    "pose_mode": PL.POSE_MODE, "templates": [str(f) for f in TEMPLATE_DIRS], "allow_paths": ALLOW_PATHS})
 
 
 @app.get("/api/faces.bin")
@@ -311,14 +324,10 @@ def cameras():
     return jsonify(rows)
 
 
-@app.post("/api/cameras")
-def create_camera():
-    f = request.form
-    name = f.get("name", "").strip() or "My cameras"
-    try:
-        board = _board_from_form(f)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+def make_camera(f, name, source):
+    """A camera profile from the request's form: source 'import' (calibration .toml, ready at once) or 'videos'
+    (intrinsic videos, calibrated by a queued job). Returns its id; raises ValueError (nothing left behind)."""
+    board = _board_from_form(f)
     jid = new_id(name, CAMERAS)
     d = CAMERAS / jid
     d.mkdir(parents=True)
@@ -326,7 +335,7 @@ def create_camera():
     up.mkdir()
     try:
         prof = {"id": jid, "name": name, "created": time.strftime("%Y-%m-%d %H:%M:%S"), "board": board}
-        if f.get("source") == "import":
+        if source == "import":
             toml = request.files.get("calib")
             if not toml or not toml.filename:
                 raise ValueError("Choose a calibration.toml file to import.")
@@ -341,7 +350,7 @@ def create_camera():
             PL.write_json(d / "profile.json", prof)
             PL.write_json(d / "status.json", {"state": "done", "stages": PL.CAMERA_STAGES, "done": PL.CAMERA_STAGES,
                                              "warnings": [], "finished": time.time()})
-            return jsonify({"id": jid})
+            return jid
         vids = {k: save_video(k, up, k) for k in ("intr_front", "intr_side", "ext_front", "ext_side")}
         if not (vids["intr_front"] and vids["intr_side"]):
             raise ValueError("Give both intrinsic videos (front and side camera).")
@@ -350,10 +359,28 @@ def create_camera():
         prof.update(source="videos", videos=vids)
         PL.write_json(d / "profile.json", prof)
         enqueue(d, PL.CAMERA_STAGES)
-        return jsonify({"id": jid})
-    except ValueError as e:
+        return jid
+    except ValueError:
         shutil.rmtree(d, ignore_errors=True)
+        raise
+
+
+def camera_usable(cam):
+    """Calibrated, or being calibrated (a session queued on it waits for the calibration)."""
+    d = CAMERAS / cam
+    if not ID_OK.match(cam or "") or not d.is_dir():
+        return False
+    return (d / "intrinsics.toml").exists() or job_status("camera", d).get("state") in ("queued", "running")
+
+
+@app.post("/api/cameras")
+def create_camera():
+    f = request.form
+    try:
+        jid = make_camera(f, f.get("name", "").strip() or "My cameras", f.get("source"))
+    except ValueError as e:
         return jsonify({"error": str(e)}), 400
+    return jsonify({"id": jid})
 
 
 @app.get("/api/cameras/<jid>")
@@ -403,10 +430,13 @@ def sessions():
 
 @app.post("/api/sessions")
 def create_session():
+    """cam_mode 'saved' (camera = a profile's id) or 'videos' / 'import': the calibration comes with the session
+    (intrinsic videos or a .toml) and becomes a new camera profile, calibrated before the session runs."""
     f = request.form
+    mode = f.get("cam_mode", "saved")
     cam = f.get("camera", "")
-    if not ID_OK.match(cam) or not (CAMERAS / cam / "intrinsics.toml").exists():
-        return jsonify({"error": "Choose a calibrated camera profile (Cameras page)."}), 400
+    if mode == "saved" and not camera_usable(cam):
+        return jsonify({"error": "Choose a camera calibration (saved, new intrinsic videos or a .toml file)."}), 400
     name = f.get("name", "").strip() or time.strftime("Session %d %b %H:%M")
     jid = new_id(name, SESSIONS)
     d = SESSIONS / jid
@@ -418,11 +448,14 @@ def create_session():
             raise ValueError("Give both videos: front and side.")
         if Path(front).resolve() == Path(side).resolve():
             raise ValueError("The front and side video are the same file.")
+        if mode in ("videos", "import"):
+            cam = make_camera(f, f.get("camera_name", "").strip() or time.strftime("Cameras %d %b %H:%M"), mode)
     except ValueError as e:
         shutil.rmtree(d, ignore_errors=True)
         return jsonify({"error": str(e)}), 400
     PL.write_json(d / "session.json", {"id": jid, "name": name, "created": time.strftime("%Y-%m-%d %H:%M:%S"),
-                                       "camera": cam, "front": front, "side": side})
+                                       "camera": cam, "camera_new": mode in ("videos", "import"),
+                                       "front": front, "side": side})
     enqueue(d, PL.SESSION_STAGES)
     return jsonify({"id": jid})
 
@@ -439,6 +472,12 @@ def session(jid):
         if cons:
             row["log"] = PL.read_log(cons[-1]).splitlines()[-60:]
     row["elapsed_s"] = round(((st.get("finished") or time.time()) - st["started"])) if st.get("started") else None
+    cd = CAMERAS / (row.get("camera") or "")
+    if row.get("camera") and ID_OK.match(row["camera"]) and cd.is_dir():
+        cst = job_status("camera", cd)
+        row["camera_job"] = {"name": (PL.read_json(cd / "profile.json", {}) or {}).get("name", cd.name),
+                             "ready": (cd / "intrinsics.toml").exists(), "state": cst.get("state"),
+                             "stage": cst.get("stage"), "progress": cst.get("progress"), "error": cst.get("error")}
     return jsonify(row)
 
 
@@ -446,23 +485,7 @@ def session(jid):
 def session_data(jid):
     """Everything the results page needs (except the large files)."""
     d = job_dir("session", jid)
-    sess = PL.read_json(d / "session.json", {}) or {}
-    res = PL.read_json(d / "results.json", {}) or {}
-    pred = PL.read_json(d / "predictions.json")
-    if pred is None and res:
-        pred = PP.inactive_predictions(d)
-    reps0, fps, n_frames = PP.session_reps(d) if res else ([], 29.97, 0)
-    bottoms = {r["rep"]: r["bottom_frame"] for r in reps0}
-    for r in (pred or {}).get("reps", []):
-        r["bottom_frame"] = min(max(bottoms.get(r["rep"], (r["start_frame"] + r["end_frame"]) // 2), r["start_frame"]), r["end_frame"])
-    mesh = PL.read_json(d / "mesh" / "mesh.json") if (d / "mesh" / "done.txt").exists() else None
-    st = job_status("session", d)
-    return jsonify({"id": jid, "name": sess.get("name", jid), "created": sess.get("created", ""),
-                    "summary": sess.get("summary") or (PP.summary(d, pred) if pred else None),
-                    "fps": fps, "n_frames": n_frames, "predictions": pred, "mesh": mesh,
-                    "smpl": SMPL_PKL.exists(), "videos": [v for v in ("front", "side") if (d / f"{v}.mp4").exists()],
-                    "warnings": st.get("warnings", []),
-                    "sync": {k: (res.get("sync") or {}).get(k) for k in ("reliable", "offset_s")}})
+    return jsonify(PP.session_view(d, SMPL_PKL.exists(), job_status("session", d).get("warnings", [])))
 
 
 @app.get("/api/sessions/<jid>/file/<path:name>")
@@ -531,13 +554,21 @@ def cancel(kind, jid):
     if not kind:
         abort(404)
     d = job_dir(kind, jid)
+    _cancel(kind, d)
+    sess = (PL.read_json(d / "session.json", {}) or {}) if kind == "session" else {}
+    cd = CAMERAS / (sess.get("camera") or "")
+    if sess.get("camera_new") and ID_OK.match(sess.get("camera") or "") and cd.is_dir():
+        _cancel("camera", cd)   # the calibration started with this session stops with it
+    return jsonify({"ok": True})
+
+
+def _cancel(kind, d):
     st = job_status(kind, d)
     if st.get("state") == "queued":
         st.update(state="cancelled", error="Stopped before it started.")
         PL.write_json(d / "status.json", st)
     elif st.get("state") == "running":
         (d / "CANCEL").write_text("stop", encoding="utf-8")
-    return jsonify({"ok": True})
 
 
 @app.delete("/api/sessions/<jid>")
@@ -555,11 +586,23 @@ def delete_session(jid):
 
 @app.errorhandler(413)
 def too_large(_):
-    return jsonify({"error": f"Upload too large (max {MAX_UPLOAD // 1024 ** 3} GB). Type the file path instead."}), 413
+    return jsonify({"error": f"Upload too large (max {MAX_UPLOAD // 1024 ** 3} GB)." + (" Type the file path instead." if ALLOW_PATHS else "")}), 413
+
+
+def install_presets():
+    """Camera calibrations shipped with the app (PRODUCT_PRESETS = a folder of profile folders, each with profile.json,
+    status.json, intrinsics.toml): copied into the data folder once, so a visitor only needs the squat videos."""
+    src = os.environ.get("PRODUCT_PRESETS")
+    for p in sorted(Path(src).iterdir()) if src and Path(src).is_dir() else []:
+        if p.is_dir() and (p / "intrinsics.toml").exists() and not (CAMERAS / p.name).exists():
+            shutil.copytree(p, CAMERAS / p.name)
+            print(f"  preset calibration: {p.name}")
 
 
 if __name__ == "__main__":
     port = int(os.environ.get("PRODUCT_PORT", "5090"))
+    host = os.environ.get("PRODUCT_HOST", "127.0.0.1")    # 0.0.0.0 in the Docker image
+    install_presets()
     import socket
     with socket.socket() as s:  # on Windows a second server can bind the same port and old code keeps answering
         if s.connect_ex(("127.0.0.1", port)) == 0:
@@ -569,4 +612,4 @@ if __name__ == "__main__":
     print(f"Squat analysis: http://127.0.0.1:{port}   (keep this window open; closing it stops running analyses)")
     print(f"  data: {PRODUCT}\n  saliency templates: {', '.join(map(str, TEMPLATE_DIRS))}\n  model: {PL.MODEL_DIR} "
           f"({'found' if (PL.MODEL_DIR / 'model.pt').exists() else 'not trained yet - errors are not detected'})")
-    app.run(host="127.0.0.1", port=port, debug=False, threaded=True)
+    app.run(host=host, port=port, debug=False, threaded=True)

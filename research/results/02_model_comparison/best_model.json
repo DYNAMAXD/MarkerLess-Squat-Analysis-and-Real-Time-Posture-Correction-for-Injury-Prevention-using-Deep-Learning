@@ -1,0 +1,20 @@
+{
+ "model": "cnn_lstm",
+ "name": "CNN-LSTM",
+ "macro_f1": 0.7577961314844118,
+ "macro_f1_std": 0.10788740517295373,
+ "rec_macro_f1": 0.776892736892737,
+ "alpha_drop": 0.022914159297943115,
+ "random_drop": 0.003591026404562096,
+ "params": 155398,
+ "median_best_epoch": 13.0,
+ "tied": [
+  "cnn_lstm",
+  "cnn1d",
+  "tcn",
+  "bigru",
+  "bilstm",
+  "st_transformer"
+ ],
+ "minutes_per_15_runs": 1.5
+}

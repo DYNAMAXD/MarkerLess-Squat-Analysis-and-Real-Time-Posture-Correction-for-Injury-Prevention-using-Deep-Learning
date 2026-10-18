@@ -1,0 +1,16 @@
+{
+ "model": "cnn_lstm",
+ "name": "CNN-LSTM",
+ "variant": "full",
+ "overrides": {},
+ "macro_f1": 0.7609441381934678,
+ "macro_f1_std": 0.10645102248818245,
+ "rec_macro_f1": 0.78987974987975,
+ "full_macro_f1": 0.7609441381934678,
+ "median_best_epoch": 15,
+ "ablation_seeds": [
+  0,
+  1,
+  2
+ ]
+}

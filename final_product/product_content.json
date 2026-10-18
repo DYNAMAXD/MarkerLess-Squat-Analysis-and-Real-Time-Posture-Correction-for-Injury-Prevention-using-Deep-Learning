@@ -1,13 +1,12 @@
 {
-  "_note": "Texts and colours of the final product (product_app.py). Edit freely; the page reloads them on every visit. Colours: a colour-blind-checked set for the dark page background - every rep block also carries the error's short name. \"view\" = default camera for that error: front, side, back, rear (three-quarter from behind) or top.",
+  "_note": "Texts and colours of the final product (product_app.py). Edit freely; the page reloads them on every visit. Colours: a colour-blind-checked set (rep blocks on the light timeline, dots on white) - every rep block also carries the error's short name. abnormal_tempo is kept only for old sessions; the model has the six classes listed. \"view\" = default camera for that error: front, side, back, rear (three-quarter from behind) or top.",
   "classes": [
     "correct",
     "insufficient_depth",
     "forward_lean",
     "knee_valgus",
     "knee_varus",
-    "heel_lift",
-    "abnormal_tempo"
+    "heel_lift"
   ],
   "errors": {
     "correct": {

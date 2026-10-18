@@ -1,0 +1,17 @@
+# research/ (squat_research package, notebooks) and the final product's model step. Python 3.11, venv C:\SquatModelVenv.
+# torch is installed by setup_env.ps1 (CUDA 13.0 build for NVIDIA driver >= 580 / RTX 50-series, CUDA 12.6 build for
+# driver >= 525, CPU build without an NVIDIA GPU):
+#   pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu130
+numpy>=1.26
+pandas>=2.1
+scipy>=1.11
+scikit-learn>=1.4
+xgboost>=2.0
+pyyaml>=6.0
+openpyxl>=3.1        # KEY_INFO.xlsx
+matplotlib>=3.8
+seaborn>=0.13
+tabulate>=0.9        # markdown tables
+jupyter>=1.0
+nbconvert>=7.0
+ipykernel>=6.29

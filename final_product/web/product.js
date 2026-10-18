@@ -1,5 +1,5 @@
 // product.js -- the final product page (final_product/product_app.py). Views: #/ new analysis, #/session/<id>,
-// #/history, #/cameras. The 3D body is played with three.js r128 (same orbit convention as the mesh viewer and the
+// #/history (camera calibration lives in the new-analysis form). The 3D body is played with three.js r128 (same orbit convention as the mesh viewer and the
 // saliency painter: theta = azimuth, 0 = in front of the body; phi = elevation).
 'use strict';
 
@@ -8,7 +8,38 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const tkey = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const store = {get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k, v){ try{ localStorage.setItem(k, v); }catch(e){} }};
+// Static viewer mode (?viewer=<URL of viewer_index.json>): a finished session's results read from plain files (the
+// ZeroGPU Space, hf_space/app.py, serves them; there is no server API). The /api/... URLs are mapped onto those files
+// and everything that would change data is off.
+const VIEWER = new URLSearchParams(location.search).get('viewer');
+let IDX = null;
+function U(url){
+  if (!IDX) return url;
+  let m;
+  if (url === '/api/content') return IDX.content;
+  if (url === '/api/faces.bin') return IDX.faces;
+  if ((m = url.match(/^\/api\/templates\/(.+)$/))) return IDX.templates[decodeURIComponent(m[1])];
+  if ((m = url.match(/^\/api\/sessions\/([^/]+)\/(data|download|reps\.csv|file\/(.+))$/))){
+    const base = IDX.root + decodeURIComponent(m[1]) + '/';
+    return base + ({data: 'viewer_data.json', download: 'download/results.zip', 'reps.csv': 'download/reps.csv'}[m[2]] || m[3]);
+  }
+  return url;
+}
+async function viewerApi(url, opt){
+  if (opt && opt.method && opt.method !== 'GET') throw new Error('Not available in this viewer.');
+  if (url === '/api/info') return IDX.info;
+  if (url === '/api/templates') return {templates: Object.fromEntries(Object.keys(IDX.templates).map(k => [k, k]))};
+  if (url === '/api/cameras') return [];
+  const list = async () => (await fetch(IDX.sessions, {cache: 'no-store'})).json();
+  if (url === '/api/sessions') return list();
+  const m = url.match(/^\/api\/sessions\/([^/]+)$/);
+  if (m){ const row = (await list()).find(r => r.id === decodeURIComponent(m[1])); if (!row) throw new Error('Session not found'); return row; }
+  const r = await fetch(U(url));
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  return r.json();
+}
 async function api(url, opt){
+  if (IDX) return viewerApi(url, opt);
   const r = await fetch(url, opt);
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || `${r.status} ${r.statusText}`);
@@ -33,7 +64,7 @@ let C = null;                        // product_content.json
 let INFO = {};
 let TPL = {};                        // template key -> file name
 const tplCache = {};                 // template key -> Float32Array 0..1
-const errInfo = c => (C && C.errors[c]) || {name: 'Not analysed', short: '', color: '#6f706b', fix: [], what: '', why: ''};
+const errInfo = c => (C && C.errors[c]) || {name: 'Not analysed', short: '', color: '#8d94b0', fix: [], what: '', why: ''};
 const STAGE_LABEL = {check: 'Checking the videos', sync: 'Finding the clap', calibration: 'Calibrating the cameras',
   extract: 'Cutting the videos', pose: 'Finding the body keypoints', triangulation: 'Building the 3D skeleton',
   angles: 'Joint angles and reps', mesh: 'Building the 3D body', model: 'Detecting errors', finish: 'Finishing',
@@ -45,13 +76,107 @@ function stateChip(state, extra){
 const fmtDate = s => { if (!s) return ''; const d = new Date(s.replace(' ', 'T')); return isNaN(d) ? s : d.toLocaleString(undefined, {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'}); };
 const fmtDay = s => { const d = new Date((s || '').replace(' ', 'T')); return isNaN(d) ? '' : d.toLocaleDateString(undefined, {day: 'numeric', month: 'short'}); };
 
-// file pickers: button -> hidden <input type=file>, show the chosen name
-document.querySelectorAll('.file').forEach(f => {
-  const inp = f.querySelector('input[type=file]'), nm = f.querySelector('.name');
-  f.querySelector('.pick').onclick = () => inp.click();
-  inp.onchange = () => { nm.textContent = inp.files[0] ? `${inp.files[0].name} (${(inp.files[0].size / 1e6).toFixed(0)} MB)` : 'No file chosen'; };
-});
-function resetFiles(form){ form.querySelectorAll('.file .name').forEach(n => n.textContent = 'No file chosen'); }
+// action buttons (class "ub"): label + an icon block that slides over it on hover; data-ic names the icon
+const ICON = {
+  delete: 'M24 20.188l-8.315-8.209 8.2-8.282-3.697-3.697-8.212 8.318-8.31-8.203-3.666 3.666 8.321 8.24-8.206 8.313 3.666 3.666 8.237-8.318 8.285 8.203z',
+  download: 'M10 2h4v9h4.5L12 17.5 5.5 11H10zM3 20h18v3H3z',
+  add: 'M10.5 3h3v7.5H21v3h-7.5V21h-3v-7.5H3v-3h7.5z',
+  play: 'M6 3l15 9-15 9z',
+  stop: 'M5 5h14v14H5z',
+  retry: 'M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z',
+  compare: 'M3 4h7v16H3zm11 0h7v16h-7zM11.5 2h1v20h-1z',
+  video: 'M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11z',
+  file: 'M6 2h8l6 6v14H6zm7 1.5V9h5.5zM8.5 13h9v1.6h-9zm0 3.5h9v1.6h-9z',
+  check: 'M9 16.2l-4.2-4.2-1.4 1.4L9 19 21 7l-1.4-1.4z',
+};
+const svgIcon = (name, fill) => `<svg viewBox="0 0 24 24" aria-hidden="true"${fill ? ` fill="${fill}"` : ''}><path d="${ICON[name] || ICON.add}"></path></svg>`;
+function makeUb(b){
+  if (b.querySelector('.ub-t')) return;
+  const label = b.textContent.trim();
+  b.innerHTML = `<span class="ub-t">${esc(label)}</span><span class="ub-i">${svgIcon(b.dataset.ic)}</span>`;
+  if (!b.getAttribute('aria-label')) b.setAttribute('aria-label', label);
+}
+const ub = (label, icon, cls, attrs) => `<button type="button" class="ub ${cls || ''}" ${attrs || ''} aria-label="${esc(label)}"><span class="ub-t">${esc(label)}</span><span class="ub-i">${svgIcon(icon)}</span></button>`;
+document.querySelectorAll('.ub[data-ic]').forEach(makeUb);
+
+// drop zones: drag & drop a file, click to choose one, or paste / type the path of a file on this PC (videos
+// already on the PC are then used in place, no upload). Each zone holds <input type=file name=X> and X_path.
+let ALLOW_PATHS = true;   // false on a hosted server (Hugging Face Space): uploads only
+const VIDEO_EXT = /\.(mp4|mov|m4v|avi|mkv|mts|m2ts|webm)$/i;
+function initDrop(z){
+  const name = z.dataset.name, kind = z.dataset.kind || 'video', canPath = kind === 'video';
+  z.tabIndex = 0; z.setAttribute('role', 'button');
+  z.innerHTML = `<input type="file" name="${name}" accept="${kind === 'toml' ? '.toml' : 'video/*'}" hidden>` +
+    (canPath ? `<input type="hidden" name="${name}_path">` : '') +
+    `<div class="dic">${svgIcon(kind === 'toml' ? 'file' : 'video')}</div>
+     <div class="dm"><div class="dt">${esc(z.dataset.title)}</div>
+       <div class="dn">Drop the ${esc(z.dataset.hint)} here</div>
+       <div class="dh">${z.classList.contains('sm') ? 'or click' : 'or click to choose'}${canPath ? '<span class="pathopt"> · <button type="button" class="lnk">type a path</button>' + (z.classList.contains('sm') ? '' : ' or paste one (Ctrl+V)') + '</span>' : ''}</div>
+       ${canPath ? '<input type="text" class="dpath hidden" placeholder="C:\\videos\\' + esc(name) + '.mp4  (Enter)">' : ''}</div>
+     <button type="button" class="dx hidden" title="Remove" aria-label="Remove">&times;</button>` +
+    ub(kind === 'toml' ? 'Add file' : 'Add video', 'add', 'sm', 'tabindex="-1"');
+  const inp = z.querySelector('input[type=file]'), path = z.querySelector(`input[name="${name}_path"]`);
+  const dn = z.querySelector('.dn'), dx = z.querySelector('.dx'), dp = z.querySelector('.dpath'), dic = z.querySelector('.dic');
+  const okFile = f => kind === 'toml' ? /\.toml$/i.test(f.name) : (/^video\//.test(f.type) || VIDEO_EXT.test(f.name));
+  const show = () => {
+    const f = inp.files[0], p = path && path.value;
+    z.classList.toggle('has', !!(f || p)); dx.classList.toggle('hidden', !(f || p));
+    dic.innerHTML = svgIcon(f || p ? 'check' : kind === 'toml' ? 'file' : 'video');
+    dn.textContent = f ? `${f.name} · ${(f.size / 1e6).toFixed(f.size < 1e7 ? 1 : 0)} MB` : p ? `${p}  (on this PC, no upload)` : `Drop the ${z.dataset.hint} here`;
+    dn.title = dn.textContent;
+  };
+  const setFile = f => {
+    if (!okFile(f)) return zoneMsg(z, kind === 'toml' ? `${f.name} is not a .toml file.` : `${f.name} does not look like a video.`);
+    const dt = new DataTransfer(); dt.items.add(f); inp.files = dt.files; if (path) path.value = ''; show(); zoneMsg(z, '');
+  };
+  const setPath = s => {
+    s = (s || '').trim().replace(/^["']|["']$/g, '');
+    if (!s || !ALLOW_PATHS) return;
+    if (!VIDEO_EXT.test(s)) return zoneMsg(z, 'That path does not end in a video file name (.mp4, .mov, ...).');
+    path.value = s; inp.value = ''; show(); zoneMsg(z, '');
+  };
+  z.reset = () => { inp.value = ''; if (path) path.value = ''; if (dp){ dp.value = ''; dp.classList.add('hidden'); } show(); zoneMsg(z, ''); };
+  z.has = () => !!(inp.files[0] || (path && path.value));
+  z.addEventListener('click', e => {
+    if (e.target === inp) return;
+    if (e.target.closest('.dx')){ e.stopPropagation(); z.reset(); return; }
+    if (e.target.closest('.lnk')){ e.stopPropagation(); dp.classList.remove('hidden'); dp.focus(); return; }
+    if (e.target.closest('.dpath')) return;
+    inp.click();
+  });
+  z.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === z){ e.preventDefault(); inp.click(); } });
+  inp.onchange = () => { if (inp.files[0]) setFile(inp.files[0]); };
+  if (dp){
+    dp.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); setPath(dp.value); dp.classList.add('hidden'); }
+      if (e.key === 'Escape'){ dp.classList.add('hidden'); } });
+    dp.addEventListener('blur', () => { if (dp.value.trim()) setPath(dp.value); dp.classList.add('hidden'); });
+  }
+  ['dragenter', 'dragover'].forEach(ev => z.addEventListener(ev, e => { e.preventDefault(); z.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => z.addEventListener(ev, e => { if (ev === 'dragleave' && z.contains(e.relatedTarget)) return; z.classList.remove('over'); }));
+  z.addEventListener('drop', e => {
+    e.preventDefault();
+    const f = e.dataTransfer.files[0];
+    if (f) return setFile(f);
+    if (canPath) setPath(e.dataTransfer.getData('text/plain'));
+  });
+  z.addEventListener('paste', e => {
+    if (e.target.closest('.dpath')) return;
+    const f = e.clipboardData.files[0];
+    if (f){ e.preventDefault(); return setFile(f); }
+    if (canPath){ e.preventDefault(); setPath(e.clipboardData.getData('text/plain')); }
+  });
+  show();
+}
+function zoneMsg(z, text){
+  let m = z.nextElementSibling && z.nextElementSibling.classList.contains('zmsg') ? z.nextElementSibling : null;
+  if (!text){ if (m) m.remove(); return; }
+  if (!m){ m = document.createElement('div'); m.className = 'msg err zmsg'; z.after(m); }
+  m.textContent = text;
+}
+document.querySelectorAll('.drop').forEach(initDrop);
+// a file dropped next to a zone must not open the video in the browser tab
+['dragover', 'drop'].forEach(ev => window.addEventListener(ev, e => { if (!e.target.closest || !e.target.closest('.drop')) e.preventDefault(); }));
+function resetFiles(form){ form.querySelectorAll('.drop').forEach(z => z.reset()); }
 function msg(el, text, err){ el.textContent = text || ''; el.classList.toggle('hidden', !text); el.classList.toggle('err', !!err); }
 
 // ====================================================================== router
@@ -60,31 +185,63 @@ function stopPolling(){ clearTimeout(pollTimer); pollTimer = null; }
 function route(){
   stopPolling(); leaveResults(); closeModals();
   const [v, id] = location.hash.replace(/^#\/?/, '').split('/');
-  const view = {session: 'vSession', history: 'vHistory', cameras: 'vCameras'}[v] || 'vHome';
+  const view = {session: 'vSession', history: 'vHistory'}[v] || 'vHome';
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('hidden', s.id !== view));
-  document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.dataset.nav === ({vHome: 'home', vHistory: 'history', vCameras: 'cameras'}[view])));
+  document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.dataset.nav === ({vHome: 'home', vHistory: 'history'}[view])));
   window.scrollTo(0, 0);
   if (view === 'vSession') openSession(decodeURIComponent(id || ''));
   else if (view === 'vHistory') loadHistory();
-  else if (view === 'vCameras') loadCameras();
   else loadHome();
 }
 window.addEventListener('hashchange', route);
 
 // ====================================================================== home
+let CAMS = [];
+let calMode = null;          // saved | videos | import  (null = not chosen yet: picked from the saved profiles)
+const camUsable = c => c.ready || ['queued', 'running'].includes((c.status || {}).state);
+function setCalMode(m){
+  calMode = m;
+  document.querySelectorAll('#calMode button').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+  $('calSaved').classList.toggle('hidden', m !== 'saved');
+  $('calVideos').classList.toggle('hidden', m !== 'videos');
+  $('calImport').classList.toggle('hidden', m !== 'import');
+  $('calName').classList.toggle('hidden', m === 'saved');
+  $('calBoard').classList.toggle('hidden', m === 'saved');
+}
+document.querySelectorAll('#calMode button').forEach(b => b.onclick = () => setCalMode(b.dataset.mode));
+function boardSummary(){
+  const f = $('newForm'), v = n => f.querySelector(`[name=${n}]`).value.trim();
+  const same = v('intr_corners') === v('ext_corners') && v('intr_square') === v('ext_square');
+  const c = s => s.replace(/\s*,\s*/, '×');
+  $('calBoardSum').textContent = `Calibration board: ${c(v('ext_corners'))} inner corners, ${v('ext_square')} mm squares` +
+    (same ? '' : ` (intrinsic videos: ${c(v('intr_corners'))}, ${v('intr_square')} mm)`) +
+    `, ${f.querySelector('[name=board_position]').value === 'horizontal' ? 'on the floor' : 'held upright'} (change)`;
+}
+$('calBoard').addEventListener('input', boardSummary);
+$('calBoard').addEventListener('change', boardSummary);
 async function loadHome(){
   try{
     const [cams, sessions] = await Promise.all([api('/api/cameras'), api('/api/sessions')]);
+    CAMS = cams;
     const sel = $('nCam'), keep = sel.value || store.get('camera');
-    const ready = cams.filter(c => c.ready);
-    sel.innerHTML = cams.length ? cams.map(c => `<option value="${esc(c.id)}" ${c.ready ? '' : 'disabled'}>${esc(c.name)}${c.ready ? '' : ' (' + esc(STATE_LABEL[c.state] || c.state) + ')'}</option>`).join('')
-      : '<option value="">No camera profile yet</option>';
-    if (keep && ready.some(c => c.id === keep)) sel.value = keep; else if (ready[0]) sel.value = ready[0].id;
-    msg($('nCamMsg'), ready.length ? '' : 'Make a camera profile first (Cameras page): the app needs your cameras\' calibration once.', !ready.length);
-    $('nStart').disabled = !ready.length;
+    const usable = cams.filter(camUsable);
+    sel.innerHTML = usable.length ? usable.map(c => `<option value="${esc(c.id)}">${esc(c.name)}${c.ready ? '' : ' (calibrating…)'}</option>`).join('')
+      : '<option value="">No saved calibration yet</option>';
+    if (keep && usable.some(c => c.id === keep)) sel.value = keep; else if (usable[0]) sel.value = usable[0].id;
+    $('calMode').querySelector('[data-mode=saved]').disabled = !usable.length;
+    if (calMode === null || (calMode === 'saved' && !usable.length)) setCalMode(usable.length ? 'saved' : 'videos');
+    renderCamCard();
+    renderHeroStats(sessions);
     renderSessionList($('recent'), sessions.slice(0, 8));
-    if (sessions.some(s => s.state === 'running' || s.state === 'queued')) pollTimer = setTimeout(loadHome, 3000);
+    if (sessions.some(s => s.state === 'running' || s.state === 'queued') || cams.some(c => ['running', 'queued'].includes((c.status || {}).state)))
+      pollTimer = setTimeout(loadHome, 3000);
   }catch(e){ $('recent').innerHTML = `<div class="errbox"><span class="ic">!</span>${esc(e.message)}</div>`; }
+}
+function renderHeroStats(sessions){
+  const done = sessions.filter(s => s.state === 'done' && s.summary), withErr = done.filter(s => s.summary.analysed);
+  $('hsSessions').textContent = done.length;
+  $('hsReps').textContent = done.reduce((a, s) => a + (s.summary.reps || 0), 0);
+  $('hsCorrect').textContent = withErr.length ? Math.round(withErr.reduce((a, s) => a + (s.summary.pct_correct || 0), 0) / withErr.length) + '%' : '–';
 }
 function renderSessionList(el, rows){
   el.innerHTML = rows.length ? rows.map(r => {
@@ -95,19 +252,52 @@ function renderSessionList(el, rows){
         <div class="row small muted" style="gap:10px;margin-top:3px"><span>${esc(fmtDate(r.created))}</span>${stateChip(r.state, extra)}
         ${s.reps != null ? `<span>${s.reps} reps</span>` : ''}${top ? `<span class="chip"><span class="dot" style="background:${top.color}"></span>${esc(top.name)}</span>` : ''}
         ${s.demo ? '<span class="chip">demo</span>' : ''}</div></div>
-      <div class="score num">${s.pct_correct != null ? s.pct_correct + '%' : ''}</div></a>`;
-  }).join('') : '<div class="empty">No analyses yet. Start one on the left.</div>';
+      ${s.pct_correct != null ? `<div class="score num" style="--p:${s.pct_correct}" title="reps correct">${s.pct_correct}%</div>` : '<div class="score none">–</div>'}</a>`;
+  }).join('') : `<div class="empty">${svgIcon('video', 'currentColor')}No analyses yet. Start one on the left.</div>`;
 }
-$('nCam').onchange = () => store.set('camera', $('nCam').value);
+$('nCam').onchange = () => { store.set('camera', $('nCam').value); renderCamCard(); };
+
+// the chosen saved calibration: state, intrinsics, warnings, delete
+function renderCamCard(){
+  const c = CAMS.find(x => x.id === $('nCam').value), el = $('camCard');
+  if (!c){ el.innerHTML = ''; return; }
+  const st = c.status || {}, running = ['running', 'queued'].includes(st.state);
+  const extra = st.state === 'running' ? (STAGE_LABEL[st.stage] || '') + (st.progress ? ` ${st.progress.done}/${st.progress.total}` : '') : st.state === 'queued' && c.queue ? `#${c.queue} in line` : '';
+  el.innerHTML = `<div class="cam"><div class="hd"><span class="name">${esc(c.name)}</span>${c.ready && !running ? '<span class="state done"><span class="dot"></span>Ready</span>' : stateChip(st.state || 'error', extra)}</div>
+    <div class="small muted">${esc(fmtDate(c.created))} · ${c.source === 'import' ? 'imported calibration' : 'from intrinsic videos'} · board ${esc((c.board.ext_corners || '').replace(",", "×"))} inner corners, ${esc(c.board.ext_square || '')} mm, ${c.board.board_position === 'horizontal' ? 'on the floor' : 'held upright'} · fallback ${c.fallback ? 'yes' : 'no'}</div>
+    ${c.intrinsics.length ? `<div class="tscroll"><table class="t" style="margin-top:8px"><thead><tr><th>Camera</th><th>Size</th><th class="n">fx</th><th class="n">fy</th><th class="n">cx</th><th class="n">cy</th></tr></thead><tbody>${c.intrinsics.map(i => `<tr style="cursor:default"><td>${esc(i.camera)}</td><td>${i.size.join('×')}</td><td class="n">${i.fx}</td><td class="n">${i.fy}</td><td class="n">${i.cx}</td><td class="n">${i.cy}</td></tr>`).join('')}</tbody></table></div>` : ''}
+    ${c.intrinsics.flatMap(i => i.warnings.map(w => `<div class="warnbox"><span class="ic">!</span><div>${esc(i.camera)} camera: ${esc(w)} - the intrinsic video may not cover the picture well. Consider recording it again.</div></div>`)).join('')}
+    ${running ? '<div class="small muted" style="margin-top:6px">Still calibrating: an analysis started now waits for it.</div>' : ''}
+    <div class="row" style="margin-top:10px">${!running ? ub('Delete calibration', 'delete', 'sm red', `data-cdel="${esc(c.id)}"`) : ''}</div></div>`;
+  const del = el.querySelector('[data-cdel]');
+  if (del) del.onclick = async () => {
+    if (!confirm(`Delete the calibration "${c.name}"? Sessions already analysed keep their results.`)) return;
+    try{ await api('/api/cameras/' + encodeURIComponent(c.id), {method: 'DELETE'}); stopPolling(); loadHome(); }catch(e){ alert(e.message); }
+  };
+}
+
 $('newForm').onsubmit = async e => {
   e.preventDefault();
   const form = $('newForm'), fd = new FormData(form);
-  const has = k => (form.querySelector(`input[name=${k}]`).files[0]) || fd.get(k + '_path').trim();
-  if (!has('front') || !has('side')) return msg($('nMsg'), 'Give both videos: front and side.', true);
+  const zone = n => form.querySelector(`.drop[data-name="${n}"]`);
+  fd.set('cam_mode', calMode);
+  const drop = names => names.forEach(n => { fd.delete(n); fd.delete(n + '_path'); });
+  if (calMode === 'saved'){
+    if (!$('nCam').value) return msg($('nMsg'), 'Choose a saved calibration, or give the intrinsic videos (New intrinsic videos).', true);
+    drop(['intr_front', 'intr_side', 'ext_front', 'ext_side', 'calib', 'fallback']);
+  } else if (calMode === 'videos'){
+    if (!zone('intr_front').has() || !zone('intr_side').has()) return msg($('nMsg'), 'Give both intrinsic videos (front and side camera) in step 1.', true);
+    if (zone('ext_front').has() !== zone('ext_side').has()) return msg($('nMsg'), 'The fallback needs both extrinsic videos (or neither).', true);
+    drop(['calib', 'fallback']); fd.delete('camera');
+  } else {
+    if (!zone('calib').has()) return msg($('nMsg'), 'Add the calibration .toml file in step 1.', true);
+    drop(['intr_front', 'intr_side', 'ext_front', 'ext_side']); fd.delete('camera');
+  }
+  if (!zone('front').has() || !zone('side').has()) return msg($('nMsg'), 'Give both squat videos in step 2: front and side.', true);
   msg($('nMsg'), 'Uploading…'); $('nStart').disabled = true;
   try{
     const r = await upload('/api/sessions', fd, $('nBar'));
-    form.reset(); resetFiles(form); msg($('nMsg'), '');
+    form.reset(); resetFiles(form); boardSummary(); msg($('nMsg'), ''); calMode = null;
     location.hash = '#/session/' + encodeURIComponent(r.id);
   }catch(err){ msg($('nMsg'), err.message, true); }
   finally{ $('nStart').disabled = false; }
@@ -130,16 +320,29 @@ function showProc(row){
   const st = row.status || {};
   $('pName').textContent = row.name;
   $('pState').innerHTML = stateChip(row.state);
-  $('pSub').textContent = `Started ${fmtDate(row.created)}` + (row.state === 'queued' ? ` · waiting for ${row.queue > 1 ? (row.queue - 1) + ' other job(s)' : 'the current job'} to finish` : '');
+  const cj = row.camera_job, camBusy = cj && ['queued', 'running'].includes(cj.state);
+  $('pSub').textContent = `Started ${fmtDate(row.created)}` + (row.state === 'queued' ? (camBusy ? ' · the cameras are calibrated first'
+    : ` · waiting for ${row.queue > 1 ? (row.queue - 1) + ' other job(s)' : 'the current job'} to finish`) : '');
   const stages = st.stages || [], done = st.done || [];
-  $('pSteps').innerHTML = stages.map(s => {
+  // the session's own camera calibration (new intrinsic videos), while it runs or if it failed
+  let camLi = '';
+  if (cj && (camBusy || (!cj.ready && cj.state === 'error'))){
+    const cls = cj.state === 'running' ? 'cur' : cj.state === 'error' ? 'fail' : '';
+    const pg = cj.state === 'running' ? `<span class="pg num">${esc(STAGE_LABEL[cj.stage] || '')}${cj.progress ? ` ${cj.progress.done} / ${cj.progress.total}` : ''}</span>`
+      : cj.state === 'queued' ? '<span class="pg">waiting</span>' : '';
+    camLi = `<li class="camstep ${cls}"><span class="ic">${cls === 'fail' ? '!' : ''}</span>Calibrating the cameras (${esc(cj.name)})${pg}</li>`;
+  } else if (cj && cj.ready && row.state === 'queued' && st.stages && !done.length){
+    camLi = `<li class="camstep done"><span class="ic">&#10003;</span>Cameras calibrated (${esc(cj.name)})</li>`;
+  }
+  $('pSteps').innerHTML = camLi + stages.map(s => {
     const cur = s === st.stage && row.state === 'running', fail = s === st.stage && ['error', 'interrupted'].includes(row.state);
     const cls = done.includes(s) ? 'done' : cur ? 'cur' : fail ? 'fail' : '';
     const pg = cur && st.progress ? `<span class="pg num">${st.progress.done} / ${st.progress.total}</span>` : '';
     return `<li class="${cls}"><span class="ic">${cls === 'done' ? '&#10003;' : cls === 'fail' ? '!' : ''}</span>${esc(STAGE_LABEL[s] || s)}${pg}</li>`;
   }).join('');
   $('pWarn').innerHTML = (st.warnings || []).map(w => `<div class="warnbox"><span class="ic">!</span><div>${esc(w)}</div></div>`).join('');
-  $('pErr').innerHTML = row.error && row.state !== 'running' ? `<div class="errbox"><span class="ic">!</span><div>${esc(row.error)}</div></div>` : '';
+  const err = row.error && row.state !== 'running' ? row.error : cj && cj.state === 'error' && !cj.ready ? `The camera calibration failed: ${cj.error || 'see the log'}` : '';
+  $('pErr').innerHTML = err ? `<div class="errbox"><span class="ic">!</span><div>${esc(err)}</div></div>` : '';
   const active = row.state === 'running' || row.state === 'queued';
   $('pCancel').classList.toggle('hidden', !active);
   $('pRetry').classList.toggle('hidden', active);
@@ -171,9 +374,9 @@ async function deleteSession(id){
 function makeViewer(canvas){
   const renderer = new THREE.WebGLRenderer({canvas, antialias: true});
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
-  const scene = new THREE.Scene(); scene.background = new THREE.Color(0x121315);
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0b1247);
   const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 100);
-  scene.add(new THREE.HemisphereLight(0xdfe8f5, 0x202226, 0.85));
+  scene.add(new THREE.HemisphereLight(0xe4eaff, 0x1a2050, 0.85));
   const sun = new THREE.DirectionalLight(0xffffff, 0.7), fill = new THREE.DirectionalLight(0xffffff, 0.25);
   scene.add(sun); scene.add(fill);
   const V = {renderer, scene, camera, canvas, target: new THREE.Vector3(0, 0.9, 0), r: 3.4, theta: 0, phi: 0.12, facing: 0, home: null, grid: null};
@@ -202,7 +405,7 @@ function makeViewer(canvas){
   new ResizeObserver(V.resize).observe(canvas);
   V.setFloor = (y, x, z) => {
     if (V.grid) scene.remove(V.grid);
-    V.grid = new THREE.GridHelper(6, 24, 0x4a4d53, 0x26282c); V.grid.position.set(x, y, z); scene.add(V.grid);
+    V.grid = new THREE.GridHelper(6, 24, 0x4a58b0, 0x1d276a); V.grid.position.set(x, y, z); scene.add(V.grid);
   };
   // left drag = rotate, right / shift drag = pan, wheel / pinch = zoom, double click = reset
   const ptrs = new Map(); let mode = null, pinch0 = 0, r0 = 0;
@@ -259,13 +462,13 @@ function paintBody(body, verts, row, sal, w, off){
   body.geom.attributes.color.needsUpdate = true;
 }
 let facesP = null;
-function loadFaces(){ return facesP = facesP || fetch('/api/faces.bin').then(r => { if (!r.ok) throw new Error('SMPL body model missing'); return r.arrayBuffer(); }).then(b => new Uint16Array(b)); }
+function loadFaces(){ return facesP = facesP || fetch(U('/api/faces.bin')).then(r => { if (!r.ok) throw new Error('SMPL body model missing'); return r.arrayBuffer(); }).then(b => new Uint16Array(b)); }
 async function loadTemplate(label){
   const k = tkey(label);
   if (tplCache[k] !== undefined) return tplCache[k];
   if (!TPL[k]) return tplCache[k] = null;
   try{
-    const j = await (await fetch('/api/templates/' + encodeURIComponent(TPL[k]))).json();
+    const j = await (await fetch(U('/api/templates/' + encodeURIComponent(TPL[k])))).json();
     const s = Float32Array.from(j.saliency); let mx = 0; for (const x of s) mx = Math.max(mx, x);
     if (mx > 0) for (let i = 0; i < s.length; i++) s[i] /= mx;
     return tplCache[k] = s;
@@ -297,8 +500,8 @@ async function loadResults(id){
   $('rScore').textContent = s.pct_correct != null ? s.pct_correct + '%' : '–';
   const top = s.top_error ? errInfo(s.top_error) : null;
   $('rTop').innerHTML = top ? `<span class="dot" style="background:${top.color}"></span> ${esc(top.name)}` : (s.analysed ? 'None' : '–');
-  $('rZip').href = `/api/sessions/${encodeURIComponent(id)}/download`;
-  $('rCsv').href = `/api/sessions/${encodeURIComponent(id)}/reps.csv`;
+  $('rZip').href = U(`/api/sessions/${encodeURIComponent(id)}/download`);
+  $('rCsv').href = U(`/api/sessions/${encodeURIComponent(id)}/reps.csv`);
   $('rCompare').disabled = R.length < 2;
   const bn = $('rBanner');
   if (P.demo){
@@ -318,7 +521,7 @@ async function loadResults(id){
   [['front', vF], ['side', vS]].forEach(([cam, v]) => {
     const has = d.videos.includes(cam);
     v.closest('.vbox').classList.toggle('hidden', !has);
-    if (has) v.src = `/api/sessions/${encodeURIComponent(id)}/file/${cam}.mp4`;
+    if (has) v.src = U(`/api/sessions/${encodeURIComponent(id)}/file/${cam}.mp4`);
   });
   updateDuration();
   [vF, vS].forEach(v => v.onloadedmetadata = () => { updateDuration(); showTime(now(), true); });
@@ -338,7 +541,7 @@ async function loadResults(id){
   } else {
     sm.classList.remove('hidden'); sm.innerHTML = '<div>Loading the 3D body…</div>';
     try{
-      const [faces, buf] = await Promise.all([loadFaces(), fetchProgress(`/api/sessions/${encodeURIComponent(id)}/file/mesh/verts.bin`, sm)]);
+      const [faces, buf] = await Promise.all([loadFaces(), fetchProgress(U(`/api/sessions/${encodeURIComponent(id)}/file/mesh/verts.bin`), sm)]);
       if (S !== id) return;
       verts = new Int16Array(buf);
       idxOf = new Map(d.mesh.frames.map((f, i) => [f, i]));
@@ -478,19 +681,19 @@ function drawTrack(t){
   if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)){ c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
   const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
   const x = s => s / dur * W;
-  g.font = '10px system-ui,Segoe UI,sans-serif'; g.fillStyle = '#6f706b'; g.textBaseline = 'alphabetic';
+  g.font = '500 10px Poppins,system-ui,Segoe UI,sans-serif'; g.fillStyle = '#8d94b0'; g.textBaseline = 'alphabetic';
   g.fillText('REPS', 4, TR.repY - 4); g.fillText('MODEL ATTENTION', 4, TR.attY - 3);
-  g.strokeStyle = '#2c2f35'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, TR.attY + TR.attH + 0.5); g.lineTo(W, TR.attY + TR.attH + 0.5); g.stroke();
+  g.strokeStyle = '#dce2f2'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, TR.attY + TR.attH + 0.5); g.lineTo(W, TR.attY + TR.attH + 0.5); g.stroke();
   for (const r of R){
     const x0 = x(r.start_frame / fps) + 1, x1 = x((r.end_frame + 1) / fps) - 1, w = Math.max(2, x1 - x0);
     const e = errInfo(r.label);
     g.globalAlpha = r.label ? 1 : 0.55; g.fillStyle = e.color;
     roundRect(g, x0, TR.repY, w, TR.repH, 4); g.fill(); g.globalAlpha = 1;
-    if (r.uncertain){ g.save(); roundRect(g, x0, TR.repY, w, TR.repH, 4); g.clip(); g.strokeStyle = 'rgba(15,16,18,.55)'; g.lineWidth = 3;
+    if (r.uncertain){ g.save(); roundRect(g, x0, TR.repY, w, TR.repH, 4); g.clip(); g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 3;
       for (let k = -TR.repH; k < w; k += 8){ g.beginPath(); g.moveTo(x0 + k, TR.repY + TR.repH); g.lineTo(x0 + k + TR.repH, TR.repY); g.stroke(); } g.restore(); }
-    if (curRep === r){ g.strokeStyle = '#ecebe8'; g.lineWidth = 2; roundRect(g, x0 - 1, TR.repY - 1, w + 2, TR.repH + 2, 5); g.stroke(); }
+    if (curRep === r){ g.strokeStyle = '#001b94'; g.lineWidth = 2; roundRect(g, x0 - 1, TR.repY - 1, w + 2, TR.repH + 2, 5); g.stroke(); }
     const lbl = r.label ? `${r.rep} ${e.short}` : `${r.rep}`;
-    g.font = '600 11px system-ui,Segoe UI,sans-serif';
+    g.font = '600 11px Poppins,system-ui,Segoe UI,sans-serif';
     if (g.measureText(lbl).width < w - 6){ g.fillStyle = '#fff'; g.fillText(lbl, x0 + 5, TR.repY + 16); }
     else if (g.measureText(String(r.rep)).width < w - 4){ g.fillStyle = '#fff'; g.fillText(String(r.rep), x0 + 3, TR.repY + 16); }
     // attention (smoothed alpha x confidence) under the rep, in the rep's colour
@@ -501,9 +704,9 @@ function drawTrack(t){
       g.lineTo(x(r.end_frame / fps), TR.attY + TR.attH); g.closePath(); g.fill(); g.globalAlpha = 1;
     }
   }
-  if (!R.length){ g.fillStyle = '#a2a29c'; g.font = '12px system-ui,sans-serif'; g.fillText('No squat reps were found.', 8, TR.repY + 16); }
+  if (!R.length){ g.fillStyle = '#5a6386'; g.font = '12px Poppins,system-ui,sans-serif'; g.fillText('No squat reps were found.', 8, TR.repY + 16); }
   const tt = t ?? now(), px = x(tt);
-  g.fillStyle = '#ecebe8'; g.fillRect(px - 1, 6, 2, H - 8);
+  g.fillStyle = '#001b94'; g.fillRect(px - 1, 6, 2, H - 8);
 }
 function roundRect(g, x, y, w, h, r){ r = Math.min(r, w / 2, h / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 new ResizeObserver(() => drawTrack()).observe($('track'));
@@ -737,9 +940,9 @@ function chartLine(title, sub, pts, unit, yMin, yMax, emptyText){
   const iw = CW - PAD.l - PAD.r, ih = CH - PAD.t - PAD.b;
   const X = i => PAD.l + (n === 1 ? iw / 2 : iw * (i + 0.5) / n), Y = v => PAD.t + ih - (v - lo) / (hi - lo) * ih;
   let s = `<svg viewBox="0 0 ${CW} ${CH}" role="img" aria-label="${esc(title)}">` + axes(n, lo, hi, unit, pts.map(p => p.label));
-  s += `<line class="cross" y1="${PAD.t}" y2="${PAD.t + ih}" stroke="#6f706b" stroke-dasharray="3 3" style="display:none"/>`;
-  s += `<path d="${pts.map((p, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p.y).toFixed(1)).join('')}" fill="none" stroke="#ecebe8" stroke-width="2" stroke-linejoin="round"/>`;
-  s += pts.map((p, i) => `<circle cx="${X(i)}" cy="${Y(p.y)}" r="4" fill="#ecebe8" stroke="#17181b" stroke-width="2"/>`).join('') + '</svg>';
+  s += `<line class="cross" y1="${PAD.t}" y2="${PAD.t + ih}" stroke="#8d94b0" stroke-dasharray="3 3" style="display:none"/>`;
+  s += `<path d="${pts.map((p, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p.y).toFixed(1)).join('')}" fill="none" stroke="#001b94" stroke-width="2.5" stroke-linejoin="round"/>`;
+  s += pts.map((p, i) => `<circle cx="${X(i)}" cy="${Y(p.y)}" r="4.5" fill="#001b94" stroke="#fff" stroke-width="2"/>`).join('') + '</svg>';
   box.insertAdjacentHTML('beforeend', s);
   hoverCols(box.querySelector('svg'), n, i => `<b>${esc(pts[i].name)}</b><br>${esc(pts[i].label)}: <b>${pts[i].y}${unit}</b>`);
 }
@@ -764,70 +967,19 @@ function chartStack(title, sub, rows){
     (classes.filter(c => rows[i].summary.counts[c]).map(c => `<span class="dot" style="background:${errInfo(c).color}"></span> ${esc(errInfo(c).name)}: <b>${rows[i].summary.counts[c]}</b>`).join('<br>') || 'no errors'));
 }
 
-// ====================================================================== cameras
-let camSrc = 'videos';
-document.querySelectorAll('#cSrc button').forEach(b => b.onclick = () => {
-  camSrc = b.dataset.src; document.querySelectorAll('#cSrc button').forEach(x => x.classList.toggle('on', x === b));
-  $('cVideos').classList.toggle('hidden', camSrc !== 'videos'); $('cImport').classList.toggle('hidden', camSrc !== 'import');
-});
-async function loadCameras(){
-  let rows;
-  try{ rows = await api('/api/cameras'); }catch(e){ $('camList').innerHTML = `<div class="errbox"><span class="ic">!</span>${esc(e.message)}</div>`; return; }
-  const open = new Set([...document.querySelectorAll('#camList details[open]')].map(d => d.dataset.id));
-  $('camList').innerHTML = rows.length ? rows.map(c => {
-    const st = c.status || {}, running = ['running', 'queued'].includes(st.state);
-    const state = c.ready && !running && st.state !== 'error' ? 'done' : st.state || 'error';
-    const extra = st.state === 'running' ? (STAGE_LABEL[st.stage] || '') + (st.progress ? ` ${st.progress.done}/${st.progress.total}` : '') : st.state === 'queued' && c.queue ? `#${c.queue} in line` : '';
-    return `<div class="cam"><div class="hd"><span class="name">${esc(c.name)}</span>${c.ready && !running ? '<span class="state done"><span class="dot"></span>Ready</span>' : stateChip(state, extra)}</div>
-      <div class="small muted">${esc(fmtDate(c.created))} · ${c.source === 'import' ? 'imported calibration' : 'from calibration videos'} · board ${esc(c.board.ext_corners || '')} inner corners, ${esc(c.board.ext_square || '')} mm, ${esc(c.board.board_position || '')}</div>
-      ${c.intrinsics.length ? `<div class="tscroll"><table class="t" style="margin-top:6px"><thead><tr><th>Camera</th><th>Size</th><th class="n">fx</th><th class="n">fy</th><th class="n">cx</th><th class="n">cy</th></tr></thead><tbody>${c.intrinsics.map(i => `<tr style="cursor:default"><td>${esc(i.camera)}</td><td>${i.size.join('×')}</td><td class="n">${i.fx}</td><td class="n">${i.fy}</td><td class="n">${i.cx}</td><td class="n">${i.cy}</td></tr>`).join('')}</tbody></table></div>` : ''}
-      ${c.intrinsics.flatMap(i => i.warnings.map(w => `<div class="warnbox"><span class="ic">!</span><div>${esc(i.camera)} camera: ${esc(w)} - the intrinsic video may not cover the picture well. Consider recording it again.</div></div>`)).join('')}
-      <div class="small muted" style="margin-top:6px">Fallback calibration: ${c.fallback ? 'yes' : 'no'}</div>
-      ${(st.warnings || []).map(w => `<div class="warnbox"><span class="ic">!</span><div>${esc(w)}</div></div>`).join('')}
-      ${st.error && !running ? `<div class="errbox"><span class="ic">!</span><div>${esc(st.error)}</div></div>` : ''}
-      <div class="row" style="margin-top:10px">${running ? `<button class="btn sm" data-cstop="${esc(c.id)}">Stop</button>` : ''}
-        ${!running && !c.ready ? `<button class="btn sm primary" data-cretry="${esc(c.id)}">Retry</button>` : ''}
-        ${!running ? `<button class="btn sm danger" data-cdel="${esc(c.id)}">Delete</button>` : ''}</div>
-      ${c.source !== 'import' ? `<details data-id="${esc(c.id)}" ${open.has(c.id) ? 'open' : ''}><summary>Log</summary><pre class="log" data-log="${esc(c.id)}"></pre></details>` : ''}</div>`;
-  }).join('') : '<div class="empty">No camera profile yet. Make one with the form.</div>';
-  document.querySelectorAll('[data-cdel]').forEach(b => b.onclick = async () => { if (!confirm('Delete this camera profile?')) return;
-    try{ await api('/api/cameras/' + encodeURIComponent(b.dataset.cdel), {method: 'DELETE'}); loadCameras(); }catch(e){ alert(e.message); } });
-  document.querySelectorAll('[data-cretry]').forEach(b => b.onclick = async () => { try{ await post(`/api/cameras/${encodeURIComponent(b.dataset.cretry)}/retry`); loadCameras(); }catch(e){ alert(e.message); } });
-  document.querySelectorAll('[data-cstop]').forEach(b => b.onclick = async () => { await post(`/api/cameras/${encodeURIComponent(b.dataset.cstop)}/cancel`); loadCameras(); });
-  document.querySelectorAll('#camList details').forEach(d => { const fill = async () => { if (!d.open) return;
-    try{ const j = await api('/api/cameras/' + encodeURIComponent(d.dataset.id)); d.querySelector('pre').textContent = j.log.join('\n'); }catch(e){} };
-    d.ontoggle = fill; fill(); });
-  stopPolling();
-  if (rows.some(c => ['running', 'queued'].includes((c.status || {}).state))) pollTimer = setTimeout(loadCameras, 3000);
-}
-$('camForm').onsubmit = async e => {
-  e.preventDefault();
-  const form = $('camForm'), fd = new FormData(form);
-  fd.set('source', camSrc);
-  if (camSrc === 'videos'){
-    const has = k => form.querySelector(`input[name=${k}]`).files[0] || (fd.get(k + '_path') || '').trim();
-    if (!has('intr_front') || !has('intr_side')) return msg($('cMsg'), 'Give both intrinsic videos (front and side camera).', true);
-    ['calib', 'fallback'].forEach(k => fd.delete(k));
-  } else {
-    if (!form.querySelector('input[name=calib]').files[0]) return msg($('cMsg'), 'Choose the calibration .toml file.', true);
-    ['intr_front', 'intr_side', 'ext_front', 'ext_side'].forEach(k => { fd.delete(k); fd.delete(k + '_path'); });
-  }
-  msg($('cMsg'), 'Uploading…'); $('cStart').disabled = true;
-  try{
-    await upload('/api/cameras', fd, $('cBar'));
-    form.reset(); resetFiles(form); msg($('cMsg'), camSrc === 'videos' ? 'Profile created: calibrating in the background (a few minutes).' : 'Profile imported.');
-    loadCameras();
-  }catch(err){ msg($('cMsg'), err.message, true); }
-  finally{ $('cStart').disabled = false; }
-};
-
 // ====================================================================== start
 (async function init(){
   try{
+    if (VIEWER){ IDX = await (await fetch(VIEWER, {cache: 'no-store'})).json(); document.body.classList.add('viewer'); }
     [C, INFO] = await Promise.all([api('/api/content'), api('/api/info')]);
     TPL = (await api('/api/templates')).templates || {};
   }catch(e){ C = C || {errors: {}, classes: []}; }
+  ALLOW_PATHS = INFO.allow_paths !== false;
+  document.body.classList.toggle('no-paths', !ALLOW_PATHS);
   $('helpPop').textContent = (C && C.saliency_help) || '';
-  $('modelState').textContent = INFO.model_active ? 'Error model: active' : 'Error model: not installed yet';
+  $('classList').innerHTML = (C.classes || []).map(c => { const e = errInfo(c);
+    return `<div class="cls"><span class="sw" style="background:${e.color}">${esc(e.short)}</span><div><b>${esc(e.name)}</b><span>${esc(e.what || '')}</span></div></div>`; }).join('');
+  $('modelState').querySelector('span').textContent = INFO.model_active ? 'Error model active' : 'Error model not installed';
+  $('modelState').classList.toggle('off', !INFO.model_active);
   route();
 })();

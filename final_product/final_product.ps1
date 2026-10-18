@@ -10,9 +10,9 @@
 #   C:\Proj1Venv      (start_website.ps1)  - this app, the 3D body mesh (MotionBERT + SMPL)
 #   C:\Pose2SimVenv   (start_batch.ps1)    - sync, calibration, 2D keypoints, 3D triangulation
 # and the SMPL body model files in MotionBERT\data\mesh\ for the 3D body (licence-gated, not in git).
-# The error-detection model is used once it is trained and exported to final_product\squat_model_export\ (model.pt) with
-# its environment C:\SquatModelVenv; until then the sessions show the reps without errors (demo predictions can be
-# switched on per session to try the page).
+# The error-detection model (research\, CNN-LSTM) runs from final_product\squat_model_export\ (copy of
+# research\results\04_final\export\) in its environment C:\SquatModelVenv (research\setup_env.ps1); without it the
+# sessions show the reps without errors (demo predictions can be switched on per session to try the page).
 #
 # Options:  -PoseMode lightweight|balanced|performance   (default performance = the same as the dataset batch;
 #                                                          lightweight is ~3x faster on a CPU but less accurate)
@@ -53,7 +53,7 @@ if (-not (Test-Path $smpl)) {
     Write-Host "WARNING: $smpl is missing - the 3D body cannot be built (everything else works)." -ForegroundColor Red
 }
 if (-not (Test-Path (Join-Path $repo "final_product\squat_model_export\model.pt"))) {
-    Write-Host "Note: the error-detection model is not trained yet - reps are shown without errors (try the demo predictions)." -ForegroundColor Yellow
+    Write-Host "Note: no error-detection model installed - copy research\results\04_final\export\ to final_product\squat_model_export\ (reps are shown without errors until then)." -ForegroundColor Yellow
 }
 
 $env:PRODUCT_POSE_MODE = $PoseMode

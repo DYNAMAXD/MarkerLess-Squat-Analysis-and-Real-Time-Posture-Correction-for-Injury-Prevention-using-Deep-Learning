@@ -1,0 +1,1 @@
+**Chosen model: CNN-LSTM**: macro-F1 0.758 ± 0.108, recording level 0.777, α check 0.023 vs random 0.004, 155,398 parameters. Tied within one standard deviation: CNN-LSTM, 1D-CNN, TCN, BiGRU, BiLSTM, ST-Transformer. Best classical baseline: XGBoost (0.527).

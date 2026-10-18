@@ -36,14 +36,15 @@ ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 import product_predictions as PP  # noqa: E402
 
-PRODUCT = ROOT / "outputs" / "product"
+PRODUCT = Path(os.environ.get("PRODUCT_DATA", ROOT / "outputs" / "product"))   # cameras/, sessions/, _work/
 WORK = PRODUCT / "_work"
-P2S_PY = next((str(p) for p in (Path("C:/Pose2SimVenv/Scripts/python.exe"),) if p.exists()), None)
+# the Pose2Sim environment: POSE2SIM_PY (e.g. the Docker image of hf_space/), else C:\Pose2SimVenv
+P2S_PY = next((str(p) for p in (Path(os.environ.get("POSE2SIM_PY", "C:/Pose2SimVenv/Scripts/python.exe")),) if p.exists()), None)
 TWO_VIEW = ROOT / "two_view"   # the preprocessing scripts (run_pose2sim.py, p2s_mesh.py)
 RUN = TWO_VIEW / "run_pose2sim.py"
 MODEL_PY = Path(os.environ.get("SQUAT_MODEL_PY", "C:/SquatModelVenv/Scripts/python.exe"))
 MODEL_DIR = Path(os.environ.get("SQUAT_MODEL_DIR", HERE / "squat_model_export"))   # model.pt, config.json, ...
-MODEL_CODE = Path(os.environ.get("SQUAT_MODEL_CODE", TWO_VIEW))  # folder that holds the squat_model package
+MODEL_CODE = Path(os.environ.get("SQUAT_MODEL_CODE", ROOT / "research"))  # folder that holds the squat_research package
 POSE_MODE = os.environ.get("PRODUCT_POSE_MODE", "performance")   # same default as the dataset batch
 DEVICE = os.environ.get("PRODUCT_DEVICE", "auto")                # falls back to the CPU without a usable GPU
 SESSION_STAGES = ["check", "sync", "calibration", "extract", "pose", "triangulation", "angles", "mesh", "model", "finish"]
@@ -244,7 +245,10 @@ def run_session(folder):
         profile = read_json(cam_dir / "profile.json")
         intr = cam_dir / "intrinsics.toml"
         if not profile or not intr.exists():
-            raise JobError(f"Camera profile '{sess['camera']}' is missing or not calibrated yet.")
+            cerr = (read_json(cam_dir / "status.json", {}) or {}).get("error")
+            raise JobError(f"The camera calibration failed: {cerr} Choose another calibration or record the intrinsic "
+                           "videos again, then start a new analysis." if cerr else
+                           f"Camera calibration '{sess['camera']}' is missing or not finished yet.")
         if not P2S_PY:
             raise JobError("The Pose2Sim environment C:\\Pose2SimVenv is missing. Run two_view\\start_batch.ps1 once to create it.")
         vids = {"front": Path(sess["front"]), "side": Path(sess["side"])}
@@ -317,7 +321,7 @@ def run_session(folder):
         job.stage("model")
         pred = None
         if (MODEL_DIR / "model.pt").exists() and MODEL_PY.exists():
-            code, out = job.run_child([MODEL_PY, "-u", "-m", "squat_model.predict", d, "--model", MODEL_DIR],
+            code, out = job.run_child([MODEL_PY, "-u", "-m", "squat_research.predict", d, "--model", MODEL_DIR],
                                       d / "model_console.txt", 20 * 60, env={"PYTHONPATH": str(MODEL_CODE)})
             pred = read_json(d / "predictions.json") if code == 0 else None
             if pred is None:

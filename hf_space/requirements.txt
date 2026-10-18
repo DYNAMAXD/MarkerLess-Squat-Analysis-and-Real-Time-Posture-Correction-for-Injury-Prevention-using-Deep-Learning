@@ -1,0 +1,21 @@
+# Hugging Face ZeroGPU Space (Gradio SDK 6.30.0, Python 3.12.12; gradio and spaces come with the SDK).
+# One environment for everything: Pose2Sim (sync, calibration, RTMPose, triangulation), the MotionBERT 3D body,
+# the CNN-LSTM error model. torch 2.13.0 is on ZeroGPU's supported list; it and onnxruntime-gpu 1.30 both use
+# CUDA 13 / cuDNN 9 (app.py reinstalls onnxruntime-gpu if rtmlib's CPU onnxruntime overwrote it).
+torch==2.13.0
+onnxruntime-gpu[cuda,cudnn]==1.30.0
+pose2sim==0.10.49
+rtmlib==0.0.16
+numpy==2.4.6
+opencv-python==5.0.0.93
+opencv-contrib-python==5.0.0.93
+pandas==3.0.6
+scipy==1.17.1
+scikit-learn==1.9.1
+smplx==0.1.28
+easydict==1.13
+pyyaml==6.0.3
+rtoml==0.13.0
+imageio-ffmpeg==0.6.0
+matplotlib==3.11.2
+spaces

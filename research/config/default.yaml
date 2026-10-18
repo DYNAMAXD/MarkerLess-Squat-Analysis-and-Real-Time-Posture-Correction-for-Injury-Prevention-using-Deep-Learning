@@ -1,0 +1,81 @@
+# =====================================================================================================
+# research_folders/config/default.yaml - every setting of the squat-error research in ONE place.
+# Notebooks read this file; notebook 03 writes results/03_ablation/best_config.yaml on top of it,
+# and notebook 04 trains the final model with that file.
+# =====================================================================================================
+
+paths:
+  recordings: C:/Users/dynam/Desktop/Project1/preprocessed_dataset/preprocessed_data   # batch preprocessing output
+  key_info:   C:/Users/dynam/Desktop/Project1/preprocessed_dataset/Additional_Info/KEY_INFO.xlsx
+  manifest:   data/manifest.csv          # relative to research_folders/
+  processed:  data/processed             # compact datasets reps_T<T>.npz
+  results:    results                    # every notebook writes into its own sub-folder here
+
+# ---- which recordings ------------------------------------------------------------------------------
+manifest:
+  classes: [correct, insufficient_depth, forward_lean, knee_valgus, knee_varus, heel_lift]   # abnormal_tempo dropped
+  exclude_persons: [E_PANTS_MALE]       # loose trousers: neck / shoulders / legs poorly triangulated
+  exclude_ids: [p01]                    # early test export of p1, not in KEY_INFO
+  # recordings whose KEY_INFO "FILE_ERROR(S)" column is not "-" are excluded automatically (p4, p50, p70, p71, p76, p105)
+
+# ---- preprocessing / inputs ------------------------------------------------------------------------
+data:
+  T: 64                  # frames per rep after resampling
+  trim: true             # trim the standing time around each rep (standing level taken per side of the bottom)
+  trim_frac: 0.10
+  body_frame: true       # rotate into the person's body frame (lateral / up / forward); false = camera-world axes
+  leg_norm: true         # divide positions by the leg length; false = metres
+  min_rep_s: 0.5         # reps shorter / longer than this (after trimming) are dropped
+  max_rep_s: 10.0
+  max_missing_core: 0.25 # drop reps with a lower-body joint missing in more than 25 % of their frames
+  max_trunk_missing: 0.5 # drop reps whose Neck is missing in more than 50 % of their frames (trunk angles wrong)
+  # input switches (ablation; applied after normalisation)
+  inputs: both           # joints | frame | both
+  velocity: true
+  tempo: true
+  view: both             # both | side | front  (simulated single camera: one body axis dropped)
+  joints: all            # all | lower_body (upper-body joints zeroed)
+  drop_frame_features: []   # frame-feature names to zero, e.g. [knee_offset_L, knee_offset_R, heel_height_L, heel_height_R]
+
+# ---- evaluation ----------------------------------------------------------------------------------------
+cv:
+  n_splits: 5            # StratifiedGroupKFold, groups = PERSON
+  seeds: [0, 1, 2]
+  val_persons: 2         # training persons held out to choose the best epoch (no test leakage)
+  train_person_frac: 1.0 # < 1: use only this fraction of the training persons (learning-curve ablation)
+
+# ---- neural training -----------------------------------------------------------------------------------
+train:
+  epochs: 60
+  batch_size: 64
+  lr: 0.001
+  weight_decay: 0.01
+  label_smoothing: 0.05
+  noise_std: 0.01        # gaussian noise on joint channels (training only)
+  patience: 20           # early stopping: stop when validation macro-F1 has not improved for 20 epochs
+  weighting: true        # balance classes and count every recording equally in the loss
+  bf16: true             # bfloat16 autocast on CUDA for the transformer (2x faster, weights stay float32)
+
+# ---- model hyper-parameters ------------------------------------------------------------------------------
+model:
+  d_model: 64
+  dropout: 0.1
+  pooling: attn          # attn | mean | max | meanmax   (attention pooling gives alpha, "which frames mattered")
+  kernel: 5              # 1D-CNN / CNN-LSTM convolution kernel (odd)
+  conv_layers: 3         # 1D-CNN / CNN-LSTM convolution layers
+  dilated: false         # 1D-CNN: dilation 1, 2, 4 ...
+  rnn_layers: 2          # BiLSTM / BiGRU / CNN-LSTM
+  tcn_kernel: 3          # TCN
+  tcn_levels: 4          # TCN residual blocks (dilation 1, 2, 4, 8)
+  n_blocks: 4            # ST-Transformer
+  n_heads: 4
+  spatial_attn: true
+  temporal_attn: true
+
+# ---- model groups ------------------------------------------------------------------------------------------
+baseline_models: [logreg, random_forest, xgboost]
+neural_models: [cnn1d, bilstm, bigru, cnn_lstm, tcn, st_transformer]
+
+# ---- alpha check ---------------------------------------------------------------------------------------------
+alpha_check:
+  frac: 0.10             # mask the top-10 % alpha frames (set to the rep mean) vs 10 % random frames

@@ -200,6 +200,14 @@ The saliency is a **painted prior** (where on the body each fault shows), timed 
 explanation. A trained classifier's per-frame saliency (Grad-CAM scaffolding in `keypoint_pipeline.py`) can be
 fed into the same overlay later.
 
+## Squat error model
+
+The per-rep error classifier (CNN-LSTM with attention pooling over the frames, chosen out of six neural models and
+three classical baselines by 5-fold cross-validation grouped by person) is built in `research/` from this folder's
+batch output (`preprocessed_data/`); see `research/README.md`. The final product runs it with
+`python -m squat_research.predict <recording folder> --model <export folder>` (`PYTHONPATH=research`) and paints
+its attention weights &alpha; on the 3D body.
+
 ## Final product
 
 The end-user web app (front + side video &rarr; errors per rep, 3D body with saliency, synced videos) lives in

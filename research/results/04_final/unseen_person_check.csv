@@ -1,0 +1,7 @@
+recording,true,reps,rep_accuracy,recording_vote
+p22,correct,10,0.0,forward_lean
+p24,insufficient_depth,10,0.0,forward_lean
+p26,forward_lean,10,0.8,forward_lean
+p28,knee_valgus,9,1.0,knee_valgus
+p30,knee_varus,10,0.9,knee_varus
+p32,heel_lift,10,1.0,heel_lift

@@ -40,6 +40,10 @@ Steps (each prints a "[stage] <name>" line; the website shows them as a progress
   angles         angles.csv (3D joints) + advancedangles.csv (angles + CoM), see p2s_biomech.py
   packaging      results.json + browser-playable videos for the website
 
+Phases (--phase, full mode): all (default) = everything; prepare = setup .. extract, then stop; pose = only the
+RTMPose step on the prepared project; finish = triangulation .. packaging. A ZeroGPU Space (hf_space/app.py) runs
+prepare and finish on the CPU and only the pose step on the GPU (it calls pose_phase() in its GPU function).
+
 Everything printed is also saved to <out-dir>/log.txt (default outputs/two_view/<name>/log.txt).
 Pose2Sim runs in its own environment (C:\\Pose2SimVenv) -- see README.md.
 """
@@ -272,6 +276,8 @@ def main():
     ap.add_argument("--device", default="cpu", choices=["auto", "cuda", "cpu"], help="pose estimation device")
     ap.add_argument("--pose-mode", default="balanced", choices=["lightweight", "balanced", "performance"],
                     help="RTMPose model size (performance = most accurate, for a GPU)")
+    ap.add_argument("--phase", default="all", choices=["all", "prepare", "pose", "finish"],
+                    help="full mode in parts: prepare (setup..extract), pose (RTMPose only), finish (triangulation..)")
     ap.add_argument("--out-dir", help="output folder (default outputs/two_view/<name>)")
     ap.add_argument("--work-dir", help="Pose2Sim working folder (default outputs/pose2sim/<name>); must not be shared")
     a = ap.parse_args()
@@ -279,12 +285,15 @@ def main():
         if not (a.intr_side and a.intr_front):
             ap.error("--mode intrinsic needs --intr-side and --intr-front")
         a.side, a.front, a.intr_from, a.calib_from = a.intr_side, a.intr_front, None, None
+    elif a.phase in ("pose", "finish"):
+        if a.mode != "full":
+            ap.error("--phase pose / finish are for --mode full")
     elif not (a.side and a.front):
         ap.error("give --side and --front videos")
     for k in ("side", "front", "intr_side", "intr_front", "intr_from", "calib_from"):  # Pose2Sim changes the cwd
         if getattr(a, k):
             setattr(a, k, str(Path(getattr(a, k)).resolve()))
-    if not a.calib_from and not a.intr_from and not (a.intr_side and a.intr_front):
+    if a.phase in ("all", "prepare") and not a.calib_from and not a.intr_from and not (a.intr_side and a.intr_front):
         ap.error("give --intr-side and --intr-front videos, or --intr-from / --calib-from an earlier calibration.toml")
 
     out_dir = Path(a.out_dir).resolve() if a.out_dir else ROOT / "outputs" / "two_view" / a.name  # website reads this
@@ -294,14 +303,20 @@ def main():
     project = (Path(a.work_dir).resolve() if a.work_dir else ROOT / "outputs" / "pose2sim" / a.name) / "trial"
     out_dir.mkdir(parents=True, exist_ok=True)
     log_path = out_dir / "log.txt"
-    log_fh = open(log_path, "w", encoding="utf-8")
+    log_fh = open(log_path, "a" if a.phase in ("pose", "finish") else "w", encoding="utf-8")
     sys.stdout, sys.stderr = Tee(sys.__stdout__, log_fh), Tee(sys.__stderr__, log_fh)
     t_start = time.time()
     code = 0
     try:
-        run(a, out_dir, project)
-        log(f"\n[done] total time {time.time() - t_start:.0f} s. Outputs in {out_dir}")
-        stage("done")
+        if a.phase == "pose":
+            pose_phase(project, resolve_device(a.device), a.pose_mode)
+        elif a.phase == "finish":
+            finish_phase(out_dir, project, json.loads((out_dir / "phase_state.json").read_text(encoding="utf-8")))
+        else:
+            run(a, out_dir, project)
+        if a.phase in ("all", "finish"):
+            log(f"\n[done] total time {time.time() - t_start:.0f} s. Outputs in {out_dir}")
+            stage("done")
     except Exception:
         log("\n[error] the analysis stopped:\n" + traceback.format_exc())
         code = 1
@@ -472,14 +487,41 @@ def run(a, out_dir, project):
              stretch if cam == "front" else None)
         log(f"[extract] wrote videos/{CAMS[cam]}.mp4")
 
-    # ------------------------------------------------------------- Pose2Sim
+    state = {"sync": sync, "out_fps": out_fps, "calib": calib_info, "boards": boards, "meta": meta, "device": a.device}
+    if a.phase == "prepare":   # the pose step runs separately (e.g. on a GPU), then --phase finish
+        (out_dir / "phase_state.json").write_text(json.dumps(state), encoding="utf-8")
+        log("[extract] prepared - next: the pose phase, then the finish phase")
+        return
+    pose_phase(project, a.device, a.pose_mode)
+    finish_phase(out_dir, project, state)
+
+
+def pose_phase(project, device, pose_mode):
+    """Pose2Sim.poseEstimation() on a prepared project, on `device` ('cpu' / 'cuda', written into its Config.toml).
+    Callable in-process (hf_space/app.py runs it inside its @spaces.GPU function)."""
+    import rtoml
+    project = Path(project)
+    cfg = rtoml.load(project / "Config.toml")
+    cfg.setdefault("pose", {})["device"] = device
+    (project / "Config.toml").write_text(rtoml.dumps(cfg), encoding="utf-8")
+    stage("pose")
+    log(f"[pose] RTMPose (HALPE_26, {pose_mode}) on the {device.upper()}")
+    cwd = os.getcwd()
+    os.chdir(project)
+    try:
+        from Pose2Sim import Pose2Sim
+        Pose2Sim.poseEstimation(str(project / "Config.toml"))
+    finally:
+        os.chdir(cwd)
+
+
+def finish_phase(out_dir, project, state):
+    """Triangulation, joint angles, reps and results.json on a project whose pose step is done."""
+    out_dir, project = Path(out_dir), Path(project)
+    sync, out_fps, calib_info, boards, meta = (state[k] for k in ("sync", "out_fps", "calib", "boards", "meta"))
     os.chdir(project)
     from Pose2Sim import Pose2Sim
     config = str(project / "Config.toml")
-
-    stage("pose")
-    log(f"[pose] RTMPose (HALPE_26, {a.pose_mode}) on the {a.device.upper()}")
-    Pose2Sim.poseEstimation(config)
 
     stage("triangulation")
     Pose2Sim.personAssociation(config)
@@ -516,7 +558,7 @@ def run(a, out_dir, project):
     # ------------------------------------------------------------- packaging
     stage("packaging")
     media = {}
-    for cam in vids:
+    for cam in CAMS:
         overlay = sorted(glob.glob(str(project / "pose" / f"{CAMS[cam]}*.mp4")))
         src = overlay[0] if overlay else project / "videos" / f"{CAMS[cam]}.mp4"
         if make_proxy(src, out_dir / f"{cam}.mp4"):
@@ -524,7 +566,7 @@ def run(a, out_dir, project):
     clean = lambda v: None if (isinstance(v, float) and not np.isfinite(v)) else (round(v, 3) if isinstance(v, float) else v)  # noqa: E731
     results = {
         "kind": "pose2sim", "sync_only": False, "meta": meta,
-        "offset_s": sync["offset_s"], "sync": sync, "device": a.device,
+        "offset_s": sync["offset_s"], "sync": sync, "device": state.get("device"),
         "fps": {"p3d": out_fps},
         "p3d": {"t": [round(float(f) / out_fps, 3) for f in df["frame"]], "n_frames": int(len(df)),
                 "m": {c: [None if not np.isfinite(v) else round(float(v), 2) for v in df[c]] for c in EXTRACTED_ANGLE_COLUMNS}},
