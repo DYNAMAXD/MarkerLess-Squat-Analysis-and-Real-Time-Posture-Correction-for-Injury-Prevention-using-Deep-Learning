@@ -1,28 +1,19 @@
 # two_view — front + side camera preprocessing
 
-Runs the existing single-view pipeline on a front video and a side video, aligns them
-with the clap sound, and fuses the two angle tables **per squat repetition**.
+Calibrated two-camera 3D squat analysis with Pose2Sim: a **side** and a **front** camera, synced by a clap, calibrated
+from a chessboard, RTMPose 2D keypoints triangulated into 3D joints, joint angles and reps per recording. The batch
+page runs it over a whole dataset; the final product (`final_product/`) and the research notebooks (`research/`) use
+its output.
 
-```
-front.mp4 ─┐  clap sync (sync_clap.py): offset = t_clap_side - t_clap_front
-           ├─► existing pipeline on each video ─► extracted_data.csv (front / side)
-side.mp4  ─┘                                              │
-                                                          ▼
-                                  rep_fusion.py: detect reps on knee flexion, match rep N <-> rep N
-                                                          ▼
-                                  rep_features.csv  (1 row per rep: front_* and side_* features)
-                                  report.html       (both views on one time axis + rep table)
-```
-
-No video editing is needed; the clap is only used to measure the time offset.
-No camera calibration is needed; views are fused at the feature level, not in 3D.
+(The earlier method - the single-view AlphaPose pipeline run on each video and fused per rep, `run_two_view.py` /
+the website's "Classic" mode - was removed on 2026-10-18 together with AlphaPose.)
 
 ## Website (easiest)
 
 Run `two_view\start_website.ps1` (right-click > Run with PowerShell). First run installs the environment at
-`C:\Proj1Venv` (~10 min); later runs just open http://127.0.0.1:5000. Upload a front and a side video: the page
-syncs them with the clap, runs the pipeline, then shows both videos together, angle graphs (click a curve to jump
-to that moment), a per-rep table and downloads. Past analyses are listed on the left.
+`C:\Proj1Venv` (~10 min); later runs just open http://127.0.0.1:5000. Upload the videos: the page runs the Pose2Sim
+3D analysis, then shows both videos together, angle graphs (click a curve to jump to that moment), a per-rep table
+and downloads. Past analyses are listed on the left.
 Files: `web_app.py` (server), `web/index.html` (page), `web_results.py` (packages results for the page).
 
 ## Pose2Sim 3D mode (calibrated, side + front camera)
@@ -216,29 +207,22 @@ The model hand-off (architecture, build instructions, sample data) is in `ai_lea
 
 ## Run from the command line
 
-```
-pip install imageio-ffmpeg
-python two_view/run_two_view.py --front front.mp4 --side side.mp4 --name subj01_set1 [--device cpu]   (CPU is the default; the website always uses CPU)
-```
-
-Outputs go to `outputs/two_view/<name>/`: `rep_features.csv`, `report.html`, `sync.json`.
-The per-view pipeline outputs are in `outputs/<name>_front/` and `outputs/<name>_side/`.
-
-Already have the two `extracted_data.csv` files?
+`run_pose2sim.py` (in `C:\Pose2SimVenv`); the examples are in its docstring. One recording, own board before the clap:
 
 ```
-python two_view/run_two_view.py --front-csv A.csv --side-csv B.csv --fps-front 29.97 --fps-side 29.97 --offset -0.39 --name test
+C:\Pose2SimVenv\Scripts\python.exe two_view/run_pose2sim.py --name subj01 --side side.mp4 --front front.mp4 \
+    --intr-from <intrinsics calibration.toml> --intr-square 41 --ext-square 41
 ```
+
+`--phase prepare | pose | finish` runs it in parts (the ZeroGPU Space runs only the pose step on the GPU).
 
 ## Files
 
 | File | Purpose |
 |---|---|
-| `sync_clap.py` | Finds the clap in each video's audio, returns the time offset and a confidence score |
-| `rep_fusion.py` | Detects reps, builds per-rep features for each view, matches reps across views |
-| `two_view_report.py` | Writes the interactive HTML report |
-| `run_two_view.py` | Runs everything end to end |
-| `run_pose2sim.py` | Pose2Sim 3D mode end to end (full analysis or extrinsic calibration only) |
+| `sync_clap.py` | Finds the clap in a video's audio (ffmpeg via imageio-ffmpeg) |
+| `rep_fusion.py` | Detects reps on knee flexion and builds per-rep features |
+| `run_pose2sim.py` | Pose2Sim 3D mode end to end (full analysis, extrinsic or intrinsic calibration only; `--phase`) |
 | `p2s_sync.py` | Side/front sync by lining up all sharp sounds (robust when each mic hears a different sound loudest) |
 | `p2s_extrinsics.py` | Board search (coarse + frame by frame), corner ordering, extrinsic solve |
 | `p2s_biomech.py` | Pose2Sim .trc &rarr; `angles.csv` + `advancedangles.csv` |

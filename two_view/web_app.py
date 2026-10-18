@@ -187,24 +187,11 @@ def create_job():
             import shutil
             shutil.rmtree(up_dir, ignore_errors=True)
         return resp
-    try:
-        front, side = _save_upload("front", up_dir, "front"), _save_upload("side", up_dir, "side")
-        if front is None or side is None:
-            raise ValueError("Please choose both a front and a side video.")
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-
-    run_dir = RUNS / name
-    run_dir.mkdir(parents=True)
-    (run_dir / "meta.json").write_text(json.dumps(
-        {"name": name, "subject": subject, "label": label, "front_file": front.name, "side_file": side.name,
-         "created": time.strftime("%Y-%m-%d %H:%M:%S")}))
-    cmd = [PROJECT_PY, "-u", str(HERE / "run_two_view.py"), "--name", name,
-           "--front", str(front), "--side", str(side), "--device", "cpu"]  # CPU only
-    if request.form.get("sync_only") == "1":
-        cmd.append("--sync-only")
-    _launch(name, cmd, up_dir)
-    return jsonify({"name": name})
+    # The "Classic" mode (single-view AlphaPose pipeline on each video, fused per rep: run_two_view.py) was removed
+    # with AlphaPose on 2026-10-18; its earlier runs can still be opened.
+    import shutil
+    shutil.rmtree(up_dir, ignore_errors=True)
+    return jsonify({"error": "The Classic mode was removed. Use 3D analysis (Pose2Sim)."}), 400
 
 
 def _status(name):
