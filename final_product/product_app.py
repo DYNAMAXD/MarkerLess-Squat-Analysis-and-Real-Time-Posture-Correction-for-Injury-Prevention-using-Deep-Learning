@@ -14,8 +14,9 @@ Pages (one HTML page, web/product.html + web/product.js):
                  optional fallback calibration from extrinsic videos
 
 Everything lives in outputs/product/ (sessions/, cameras/, _work/). The work is done by product_pipeline.py.
-The error model is not trained yet: sessions show the reps without errors; "Try demo predictions" fills in
-made-up errors (clearly marked DEMO) so the whole page can be tried.
+The error model is final_product/squat_model_export/ (in git); without it the sessions show the reps without errors
+and "Try demo predictions" fills in made-up errors (clearly marked DEMO). Camera calibrations shipped in
+final_product/presets/cameras/ are copied into outputs/product/cameras/ on the first start.
 """
 import io
 import json
@@ -590,9 +591,10 @@ def too_large(_):
 
 
 def install_presets():
-    """Camera calibrations shipped with the app (PRODUCT_PRESETS = a folder of profile folders, each with profile.json,
-    status.json, intrinsics.toml): copied into the data folder once, so a visitor only needs the squat videos."""
-    src = os.environ.get("PRODUCT_PRESETS")
+    """Camera calibrations shipped with the app (PRODUCT_PRESETS, default final_product/presets/cameras/ = a folder of
+    profile folders, each with profile.json, status.json, intrinsics.toml): copied into the data folder once, so a new
+    user only needs the squat videos when they record with the dataset's cameras."""
+    src = os.environ.get("PRODUCT_PRESETS") or str(HERE / "presets" / "cameras")
     for p in sorted(Path(src).iterdir()) if src and Path(src).is_dir() else []:
         if p.is_dir() and (p / "intrinsics.toml").exists() and not (CAMERAS / p.name).exists():
             shutil.copytree(p, CAMERAS / p.name)

@@ -1,0 +1,9 @@
+# Error-model environment of the final product (C:\SquatModelVenv), Python 3.11: runs
+# `python -m squat_research.predict` (research/squat_research) on a finished session. Installed by final_product/setup.ps1.
+# torch is installed by setup.ps1 from the CPU index (the model is small; prediction takes a second on a CPU).
+# research/setup_env.ps1 turns the same environment into the full research one (notebooks, GPU torch).
+numpy==2.4.6
+pandas==3.0.6
+scipy==1.17.1
+scikit-learn==1.9.1
+PyYAML==6.0.3

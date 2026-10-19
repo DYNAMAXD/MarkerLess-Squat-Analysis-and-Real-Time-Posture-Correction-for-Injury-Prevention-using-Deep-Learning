@@ -1,9 +1,32 @@
 # Final product (front + side video &rarr; errors per rep, 3D body, synced videos)
 
-**Run** `final_product\final_product.ps1` &rarr; http://127.0.0.1:5090 (uses `C:\Proj1Venv` for the app and the mesh,
-`C:\Pose2SimVenv` for the preprocessing; keep the window open while an analysis runs). Options:
-`-PoseMode lightweight|balanced|performance` (default performance, the same as the dataset batch; lightweight is
-about 3&times; faster on a CPU), `-Device auto|cpu|cuda`, `-Port`.
+## Quick start (Windows)
+
+```powershell
+git clone -b final_product https://github.com/DYNAMAXD/MarkerLess-Squat-Analysis-and-Real-Time-Posture-Correction-for-Injury-Prevention-using-Deep-Learning
+```
+
+then right-click `final_product\final_product.ps1` &rarr; **Run with PowerShell** (or
+`powershell -ExecutionPolicy Bypass -File final_product\final_product.ps1`). Nothing else to install by hand:
+
+* **First start** (needs internet, ~15-25 min, ~6 GB on C:): `setup.ps1` installs Python 3.11 if missing (winget),
+  downloads the Git LFS files (MotionBERT weights, SMPL body model) if the clone only has pointers, and creates the three
+  environments outside the repo (the repo's long folder name can hit the Windows path-length limit):
+  `C:\Proj1Venv` (app + 3D body mesh, `requirements_app.txt`), `C:\Pose2SimVenv` (sync, calibration, pose, 3D;
+  `two_view\requirements_pose2sim.txt`, onnxruntime-gpu when an NVIDIA GPU with driver &ge; 580 is present) and
+  `C:\SquatModelVenv` (error model, `requirements_model.txt` + CPU torch). Existing environments are kept.
+  The first analysis also downloads the pose models (~300 MB).
+* **Later starts** only check the environments (a few seconds) and open http://127.0.0.1:5090. Keep the window open
+  while an analysis runs.
+* Already in git: the trained error model (`squat_model_export/`) and the dataset's camera calibration
+  (`presets/cameras/Dataset_cameras`, offered as a saved calibration on the first start). Not in git: `outputs\`
+  (your sessions, calibrations and Pose2Sim work folders are created there on this PC).
+
+Options: `-PoseMode lightweight|balanced|performance` (default performance, the same as the dataset batch;
+lightweight is about 3&times; faster on a CPU), `-Device auto|cpu|cuda`, `-Port`, `-ForceCpu` (setup: no GPU
+packages), `-AppVenv` / `-Pose2SimVenv` / `-ModelVenv` (other environment folders).
+
+## Using it
 
 1. **New analysis**, one page in three steps. (1) **Camera calibration**, above the videos: a saved calibration,
    new intrinsic videos (+ optional extrinsic videos as a fallback) or an imported Pose2Sim `calibration.toml`;
@@ -22,9 +45,10 @@ about 3&times; faster on a CPU), `-Device auto|cpu|cuda`, `-Port`.
 3. **History**: every session with % correct, errors per session, squat depth and rep duration over time.
 
 **Error model**: the CNN-LSTM with attention pooling from `research/` (6 classes, macro-F1 0.76 in 5-fold
-cross-validation by person; see `research/README.md`). Install it by copying `research\results\04_final\export\`
-(train it with `research\notebooks\04_final_model.ipynb`) to `final_product\squat_model_export\`; its environment is
-`C:\SquatModelVenv` (`research\setup_env.ps1`). The pipeline runs
+cross-validation by person; see `research/README.md`), shipped in git in `final_product\squat_model_export\`. To swap
+in a newly trained one (`research\notebooks\04_final_model.ipynb`), copy `research\results\04_final\export\` there.
+Its environment is `C:\SquatModelVenv` (created by `setup.ps1` with CPU torch; `research\setup_env.ps1` turns it into
+the full research environment). The pipeline runs
 `python -m squat_research.predict <session> --model <export>` (PYTHONPATH = `research\`, env `SQUAT_MODEL_CODE` /
 `SQUAT_MODEL_DIR` / `SQUAT_MODEL_PY`) and uses its `predictions.json`: per rep the error, confidence, probabilities and
 the frame attention α; the 3D body is coloured with the painted template of the error x α x confidence over time.
@@ -39,11 +63,14 @@ overrides), matched to the error name. Texts, colours and the default camera vie
 
 | File | Purpose |
 |---|---|
-| `final_product.ps1` | Launcher (checks the environments, starts the app, opens the browser) |
+| `final_product.ps1` | Launcher (runs `setup.ps1`, starts the app, opens the browser) |
+| `setup.ps1` | First-start setup / check: Git LFS files, Python 3.11, the three environments |
+| `requirements_app.txt`, `requirements_model.txt` | Packages of `C:\Proj1Venv` and `C:\SquatModelVenv` (Pose2Sim: `two_view\requirements_pose2sim.txt`) |
+| `presets/cameras/` | Camera calibrations copied into `outputs\product\cameras\` on the first start (the dataset's DJI pair) |
 | `product_app.py` | Flask app: pages, camera calibrations (made with a session or reused), sessions, job queue (one job at a time), downloads |
 | `product_pipeline.py` | Background jobs: session (preprocess &rarr; mesh &rarr; model &rarr; summary) and camera profile |
 | `product_predictions.py` | `predictions.json` contract: inactive / demo predictions, attention smoothing, `rep_results.csv`, summary |
 | `product_content.json` | Error names, colours, explanations, fixes and default camera view per error |
 | `web/product.html`, `web/product.js`, `web/vendor/three.min.js` | The page (three.js r128; IndiGo-style indigo palette) |
 | `web/vendor/fonts/` | Poppins (latin, 400-700, SIL OFL - `OFL.txt`), served locally so the page also works offline |
-| `squat_model_export/` | the installed model export (`model.pt`, `config.json`, `norm_stats.json`, `model_card.md`; not in git) |
+| `squat_model_export/` | the installed model export (`model.pt`, `config.json`, `norm_stats.json`, `model_card.md`; in git, `model.pt` as a normal file - not LFS) |

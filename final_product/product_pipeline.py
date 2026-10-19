@@ -162,6 +162,11 @@ class Job:
     def stage(self, name):
         if self.st["stage"] and self.st["stage"] != name and self.st["stage"] not in self.st["done"]:
             self.st["done"].append(self.st["stage"])
+        # a short stage can start and end between two polls of the child's output (the clap sync takes ~2 s):
+        # every stage before this one is finished too
+        stages = self.st["stages"]
+        if name in stages:
+            self.st["done"] += [s for s in stages[:stages.index(name)] if s not in self.st["done"]]
         self.st["stage"], self.st["progress"] = name, None
         self.log(f"stage: {name}")
         self.save()
@@ -250,7 +255,7 @@ def run_session(folder):
                            "videos again, then start a new analysis." if cerr else
                            f"Camera calibration '{sess['camera']}' is missing or not finished yet.")
         if not P2S_PY:
-            raise JobError("The Pose2Sim environment C:\\Pose2SimVenv is missing. Run two_view\\start_batch.ps1 once to create it.")
+            raise JobError("The Pose2Sim environment C:\\Pose2SimVenv is missing. Close the app window and start final_product\\final_product.ps1 again (its setup creates it).")
         vids = {"front": Path(sess["front"]), "side": Path(sess["side"])}
 
         # ---- check
@@ -326,6 +331,9 @@ def run_session(folder):
             pred = read_json(d / "predictions.json") if code == 0 else None
             if pred is None:
                 job.warn("The error-detection model failed (" + error_line(out) + "). Showing the reps without errors.")
+        elif (MODEL_DIR / "model.pt").exists():
+            job.warn(f"The model environment {MODEL_PY.parent.parent} is missing (start final_product\\final_product.ps1 "
+                     "again to create it). Showing the reps without errors.")
         else:
             job.log(f"no trained model at {MODEL_DIR} - reps are shown without errors")
         if pred is None:
@@ -354,7 +362,7 @@ def run_camera(folder):
     try:
         prof = read_json(d / "profile.json")
         if not P2S_PY:
-            raise JobError("The Pose2Sim environment C:\\Pose2SimVenv is missing. Run two_view\\start_batch.ps1 once to create it.")
+            raise JobError("The Pose2Sim environment C:\\Pose2SimVenv is missing. Close the app window and start final_product\\final_product.ps1 again (its setup creates it).")
         board, vids = prof.get("board", {}), prof.get("videos", {})
         job.stage("check")
         for k in ("intr_front", "intr_side", "ext_front", "ext_side"):

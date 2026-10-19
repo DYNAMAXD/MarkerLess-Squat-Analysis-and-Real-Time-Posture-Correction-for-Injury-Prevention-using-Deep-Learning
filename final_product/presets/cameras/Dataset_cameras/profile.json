@@ -1,0 +1,7 @@
+{
+ "id": "Dataset_cameras",
+ "name": "Dataset cameras (DJI pair, 1920x1080)",
+ "created": "2026-10-17 11:07:00",
+ "board": {"intr_corners": "6,7", "ext_corners": "6,7", "intr_square": 41.0, "ext_square": 41.0, "board_position": "vertical"},
+ "source": "import"
+}
