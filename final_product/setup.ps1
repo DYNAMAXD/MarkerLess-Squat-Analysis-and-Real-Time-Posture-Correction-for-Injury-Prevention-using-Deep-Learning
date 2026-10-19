@@ -3,21 +3,23 @@
 #
 #   powershell -ExecutionPolicy Bypass -File final_product\setup.ps1            (-ForceCpu: no GPU packages)
 #
-# First run (needs internet, ~15-25 min, ~6 GB on C:):
+# First run (needs internet, ~15-25 min, ~6 GB next to the clone):
 #   1. the large files kept in Git LFS (MotionBERT weights, SMPL body model) - pulled if the clone only has pointers
-#   2. Python 3.11 (winget) if missing
-#   3. three environments, outside the repo because its long folder name can hit the Windows path-length limit:
-#        C:\Proj1Venv       app + 3D body mesh             (final_product\requirements_app.txt)
-#        C:\Pose2SimVenv    sync, calibration, 2D pose, 3D (two_view\requirements_pose2sim.txt; onnxruntime-gpu with
-#                           its own CUDA libraries when an NVIDIA GPU with driver >= 580 is present, else CPU)
-#        C:\SquatModelVenv  error-detection model           (final_product\requirements_model.txt + CPU torch)
+#   2. Windows long paths switched on (one administrator prompt) if they are off: the environments live inside the
+#      clone and their deepest files (torch) are ~190 characters below the environment folder
+#   3. Python 3.11 (winget) if missing
+#   4. three environments inside the clone, in .venv\ (git-ignored):
+#        .venv\app        app + 3D body mesh             (final_product\requirements_app.txt)
+#        .venv\pose2sim   sync, calibration, 2D pose, 3D (two_view\requirements_pose2sim.txt; onnxruntime-gpu with
+#                         its own CUDA libraries when an NVIDIA GPU with driver >= 580 is present, else CPU)
+#        .venv\model      error-detection model           (final_product\requirements_model.txt + CPU torch)
 #      An environment that already exists is kept and only completed if a package is missing.
 # The pose models (~300 MB) are downloaded by the first analysis.
 
 param(
-    [string]$AppVenv = "C:\Proj1Venv",
-    [string]$Pose2SimVenv = "C:\Pose2SimVenv",
-    [string]$ModelVenv = "C:\SquatModelVenv",
+    [string]$AppVenv = (Join-Path (Split-Path -Parent $PSScriptRoot) ".venv\app"),
+    [string]$Pose2SimVenv = (Join-Path (Split-Path -Parent $PSScriptRoot) ".venv\pose2sim"),
+    [string]$ModelVenv = (Join-Path (Split-Path -Parent $PSScriptRoot) ".venv\model"),
     [switch]$ForceCpu
 )
 # "Continue": in Windows PowerShell 5.1 "Stop" turns any stderr line of python/pip/git into a fatal error; failures
@@ -27,6 +29,27 @@ $repo = Split-Path -Parent $PSScriptRoot
 $failed = @()
 
 function Say($text, $colour = "Yellow") { Write-Host $text -ForegroundColor $colour }
+
+# --- 0. Windows long paths ------------------------------------------------------------------------------------------
+# Windows refuses paths over 260 characters unless LongPathsEnabled is on; pip then fails half-way through torch.
+$deepest = 190   # longest file path inside an environment (torch's bundled licence folders), measured 2026-10-19
+$longest = (@($AppVenv, $Pose2SimVenv, $ModelVenv) | ForEach-Object { $_.Length } | Measure-Object -Maximum).Maximum
+function Test-LongPaths {
+    try { return (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name LongPathsEnabled -ErrorAction Stop).LongPathsEnabled -eq 1 }
+    catch { return $false }
+}
+if ($longest + $deepest -ge 260 -and -not (Test-LongPaths)) {
+    Say "This folder's path is long and Windows long paths are off, so the packages cannot be installed here yet."
+    Say "Turning on Windows long paths (one time) - please click Yes in the administrator prompt ..."
+    try {
+        Start-Process powershell -Verb RunAs -Wait -ArgumentList '-NoProfile -Command "Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem -Name LongPathsEnabled -Value 1 -Type DWord"'
+    } catch {}
+    if (-not (Test-LongPaths)) {
+        Say "Windows long paths are still off. Either start again and click Yes in the administrator prompt, or clone the repository into a short folder (for example C:\squat) and start it from there." "Red"
+        exit 1
+    }
+    Say "Windows long paths are on." "Green"
+}
 
 # --- 1. Git LFS files ---------------------------------------------------------------------------------------------
 # Without git-lfs a clone holds ~130-byte text pointers instead of the weights.

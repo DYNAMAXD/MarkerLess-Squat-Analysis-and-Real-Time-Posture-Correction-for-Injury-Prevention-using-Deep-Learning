@@ -1,6 +1,6 @@
 """
 product_pipeline.py -- the background jobs of the final product (product_app.py). One process per job; the page reads
-the job's status.json. Runs with the project environment (C:\\Proj1Venv); Pose2Sim steps run in C:\\Pose2SimVenv.
+the job's status.json. Runs with the app environment (.venv\\app); Pose2Sim steps run in .venv\\pose2sim (both inside the clone).
 
     python final_product/product_pipeline.py session <outputs/product/sessions/<id>>
     python final_product/product_pipeline.py camera  <outputs/product/cameras/<id>>
@@ -38,11 +38,12 @@ import product_predictions as PP  # noqa: E402
 
 PRODUCT = Path(os.environ.get("PRODUCT_DATA", ROOT / "outputs" / "product"))   # cameras/, sessions/, _work/
 WORK = PRODUCT / "_work"
-# the Pose2Sim environment: POSE2SIM_PY (e.g. the Docker image of hf_space/), else C:\Pose2SimVenv
-P2S_PY = next((str(p) for p in (Path(os.environ.get("POSE2SIM_PY", "C:/Pose2SimVenv/Scripts/python.exe")),) if p.exists()), None)
+# the Pose2Sim environment: POSE2SIM_PY (set by final_product.ps1; the Docker image of hf_space/), else .venv\pose2sim
+P2S_PATH = Path(os.environ.get("POSE2SIM_PY", ROOT / ".venv" / "pose2sim" / "Scripts" / "python.exe"))
+P2S_PY = str(P2S_PATH) if P2S_PATH.exists() else None
 TWO_VIEW = ROOT / "two_view"   # the preprocessing scripts (run_pose2sim.py, p2s_mesh.py)
 RUN = TWO_VIEW / "run_pose2sim.py"
-MODEL_PY = Path(os.environ.get("SQUAT_MODEL_PY", "C:/SquatModelVenv/Scripts/python.exe"))
+MODEL_PY = Path(os.environ.get("SQUAT_MODEL_PY", ROOT / ".venv" / "model" / "Scripts" / "python.exe"))
 MODEL_DIR = Path(os.environ.get("SQUAT_MODEL_DIR", HERE / "squat_model_export"))   # model.pt, config.json, ...
 MODEL_CODE = Path(os.environ.get("SQUAT_MODEL_CODE", ROOT / "research"))  # folder that holds the squat_research package
 POSE_MODE = os.environ.get("PRODUCT_POSE_MODE", "performance")   # same default as the dataset batch
@@ -255,7 +256,7 @@ def run_session(folder):
                            "videos again, then start a new analysis." if cerr else
                            f"Camera calibration '{sess['camera']}' is missing or not finished yet.")
         if not P2S_PY:
-            raise JobError("The Pose2Sim environment C:\\Pose2SimVenv is missing. Close the app window and start final_product\\final_product.ps1 again (its setup creates it).")
+            raise JobError(f"The Pose2Sim environment {P2S_PATH.parent.parent} is missing. Close the app window and start final_product\\final_product.ps1 again (its setup creates it).")
         vids = {"front": Path(sess["front"]), "side": Path(sess["side"])}
 
         # ---- check
@@ -362,7 +363,7 @@ def run_camera(folder):
     try:
         prof = read_json(d / "profile.json")
         if not P2S_PY:
-            raise JobError("The Pose2Sim environment C:\\Pose2SimVenv is missing. Close the app window and start final_product\\final_product.ps1 again (its setup creates it).")
+            raise JobError(f"The Pose2Sim environment {P2S_PATH.parent.parent} is missing. Close the app window and start final_product\\final_product.ps1 again (its setup creates it).")
         board, vids = prof.get("board", {}), prof.get("videos", {})
         job.stage("check")
         for k in ("intr_front", "intr_side", "ext_front", "ext_side"):

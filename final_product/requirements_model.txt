@@ -1,4 +1,4 @@
-# Error-model environment of the final product (C:\SquatModelVenv), Python 3.11: runs
+# Error-model environment of the final product (.venv\model inside the clone), Python 3.11: runs
 # `python -m squat_research.predict` (research/squat_research) on a finished session. Installed by final_product/setup.ps1.
 # torch is installed by setup.ps1 from the CPU index (the model is small; prediction takes a second on a CPU).
 # research/setup_env.ps1 turns the same environment into the full research one (notebooks, GPU torch).

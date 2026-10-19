@@ -4,10 +4,11 @@
 #   Right-click > Run with PowerShell   (or:  powershell -ExecutionPolicy Bypass -File final_product\final_product.ps1)
 #
 # A fresh clone needs nothing else: the first start runs final_product\setup.ps1, which installs Python 3.11 if
-# missing, pulls the Git LFS files and creates the three environments (needs internet, ~15-25 min, ~6 GB on C:):
-#   C:\Proj1Venv       this app, the 3D body mesh (MotionBERT + SMPL)
-#   C:\Pose2SimVenv    sync, calibration, 2D keypoints, 3D triangulation
-#   C:\SquatModelVenv  the error-detection model (research\, CNN-LSTM, final_product\squat_model_export\)
+# missing, pulls the Git LFS files and creates the three environments (needs internet, ~15-25 min, ~6 GB):
+#   .venv\app        this app, the 3D body mesh (MotionBERT + SMPL)
+#   .venv\pose2sim   sync, calibration, 2D keypoints, 3D triangulation
+#   .venv\model      the error-detection model (research\, CNN-LSTM, final_product\squat_model_export\)
+# all inside this clone (git-ignored); nothing is written outside it except Python 3.11 itself if it is missing.
 # Later starts only check them (a few seconds) and open http://127.0.0.1:5090 . KEEP THIS WINDOW OPEN while an
 # analysis runs (closing it stops the analysis; press Retry on the session afterwards to continue).
 #
@@ -23,16 +24,20 @@ param(
     [ValidateSet("auto", "cpu", "cuda")][string]$Device = "auto",
     [int]$Port = 5090,
     [switch]$ForceCpu,
-    [string]$AppVenv = "C:\Proj1Venv",
-    [string]$Pose2SimVenv = "C:\Pose2SimVenv",
-    [string]$ModelVenv = "C:\SquatModelVenv"
+    [string]$AppVenv = (Join-Path (Split-Path -Parent $PSScriptRoot) ".venv\app"),
+    [string]$Pose2SimVenv = (Join-Path (Split-Path -Parent $PSScriptRoot) ".venv\pose2sim"),
+    [string]$ModelVenv = (Join-Path (Split-Path -Parent $PSScriptRoot) ".venv\model")
 )
 # "Continue": in Windows PowerShell 5.1 "Stop" turns any stderr line of python/pip into a fatal error.
 $ErrorActionPreference = "Continue"
 $repo = Split-Path -Parent $PSScriptRoot
 
 Write-Host "Checking the installation (the first start sets everything up; this takes a while once) ..." -ForegroundColor Green
-& powershell -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot\setup.ps1" -AppVenv $AppVenv -Pose2SimVenv $Pose2SimVenv -ModelVenv $ModelVenv -ForceCpu:$ForceCpu
+# "powershell -File" passes every argument as text: a switch must be given bare ("-ForceCpu"), never "-ForceCpu:False"
+$setupArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "$PSScriptRoot\setup.ps1",
+               "-AppVenv", $AppVenv, "-Pose2SimVenv", $Pose2SimVenv, "-ModelVenv", $ModelVenv)
+if ($ForceCpu) { $setupArgs += "-ForceCpu" }
+& powershell @setupArgs
 $setupOk = $LASTEXITCODE -eq 0
 
 $py = Join-Path $AppVenv "Scripts\python.exe"

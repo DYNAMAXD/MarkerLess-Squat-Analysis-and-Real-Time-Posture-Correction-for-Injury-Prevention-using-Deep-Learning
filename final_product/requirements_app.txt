@@ -1,6 +1,6 @@
-# App environment of the final product (C:\Proj1Venv), Python 3.11, Windows: the web app (product_app.py) and the
+# App environment of the final product (.venv\app inside the clone), Python 3.11, Windows: the web app (product_app.py) and the
 # 3D body mesh (two_view/p2s_mesh.py -> MotionBERT + SMPL). Installed by final_product/setup.ps1.
-# Versions = the working C:\Proj1Venv (2026-10-19). torch from PyPI = CPU build on Windows (the mesh takes ~10 s on a CPU).
+# Versions = the working app environment (2026-10-19). torch from PyPI = CPU build on Windows (the mesh takes ~10 s on a CPU).
 Flask==3.1.3
 Werkzeug==3.1.8
 numpy==1.26.4

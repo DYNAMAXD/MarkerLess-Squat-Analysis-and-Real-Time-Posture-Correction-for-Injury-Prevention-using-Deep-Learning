@@ -2,7 +2,7 @@
 product_app.py -- the final product: upload a front + a side squat video, get the errors per rep, the 3D body with
 the error's saliency on it, the keypoint videos and the rep table, all on one timeline.
 
-    C:\\Proj1Venv\\Scripts\\python.exe final_product/product_app.py        then open http://127.0.0.1:5090
+    .venv\\app\\Scripts\\python.exe final_product/product_app.py        then open http://127.0.0.1:5090
     (or run final_product\\final_product.ps1, which also checks the environments)
 
 Pages (one HTML page, web/product.html + web/product.js):
