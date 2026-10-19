@@ -5,6 +5,7 @@ Flask==3.1.3
 Werkzeug==3.1.8
 numpy==1.26.4
 scipy==1.17.1
+pandas==2.3.3
 opencv-python==4.11.0.86
 torch==2.13.0
 smplx==0.1.28

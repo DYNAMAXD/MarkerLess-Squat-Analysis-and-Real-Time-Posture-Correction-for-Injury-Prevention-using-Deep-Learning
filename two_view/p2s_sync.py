@@ -34,6 +34,12 @@ def _events(env, min_gap_s=0.25):
     return p
 
 
+def _dominant(env, ev, k, min_strength=8.0, margin=1.5):
+    """Is event k a clear clap: the loudest sharp sound of the video, at least `margin` x the next loudest?"""
+    rest = [env[e] for e in ev if e != k]
+    return env[k] >= min_strength and (not rest or env[k] >= margin * max(rest))
+
+
 def _onset_start(env, i, max_back_s=0.05):
     """Walk back from a peak to where the bang starts (rule of sync_clap.detect_clap), at most max_back_s, so a
     noisy background cannot drag the clap seconds earlier."""
@@ -98,7 +104,8 @@ def sync_side_front(side, front, seconds=90.0, log=print, claps=1):
             (i, j, _), end_clap = sorted([(i, j, 0), other])  # earlier = start clap, later = end clap
     t0 = _onset_start(es, i) * HOP_S  # front clap = side clap + offset (consistent by construction)
     reliable = ((len(matches) >= 3 and peak_ratio >= 1.3) or                       # several sounds agree
-                (len(ev_s) <= 2 and len(ev_f) <= 2 and es[i] >= 8 and ef[j] >= 8))  # quiet videos, one clear clap
+                (len(ev_s) <= 2 and len(ev_f) <= 2 and es[i] >= 8 and ef[j] >= 8) or  # quiet videos, one clear clap
+                (_dominant(es, ev_s, i) and _dominant(ef, ev_f, j)))  # the clap is by far the loudest sound in both
     if not reliable:
         log("[sync] WARNING: the offset is not clearly determined (few matching sounds) -- check the result.")
     out = {"t_clap_side_s": round(t0, 3), "t_clap_front_s": round(t0 + offset, 3),

@@ -104,10 +104,10 @@ if (-not $ForceCpu -and (Get-Command nvidia-smi -ErrorAction SilentlyContinue)) 
 
 # --- 3a. App environment --------------------------------------------------------------------------------------------
 $appPy = New-Env $AppVenv
-if ($appPy -and -not (Test-Imports $appPy "flask, numpy, cv2, scipy, torch, smplx, easydict, yaml, imageio_ffmpeg")) {
+if ($appPy -and -not (Test-Imports $appPy "flask, numpy, cv2, scipy, pandas, torch, smplx, easydict, yaml, imageio_ffmpeg")) {
     Say "Installing the app packages into $AppVenv (torch, smplx, flask, ...) ..."
     & $appPy -m pip install -r (Join-Path $PSScriptRoot "requirements_app.txt")
-    if (-not (Test-Imports $appPy "flask, numpy, cv2, scipy, torch, smplx, easydict, yaml, imageio_ffmpeg")) { $failed += $AppVenv }
+    if (-not (Test-Imports $appPy "flask, numpy, cv2, scipy, pandas, torch, smplx, easydict, yaml, imageio_ffmpeg")) { $failed += $AppVenv }
 } elseif (-not $appPy) { $failed += $AppVenv }
 
 # --- 3b. Pose2Sim environment ---------------------------------------------------------------------------------------

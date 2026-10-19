@@ -20,9 +20,6 @@ test_videos/
 *.gif
 AlphaPose/examples/demo/*.jpg
 
-# Trained model export for the final product (large; copied in locally)
-final_product/squat_model_export/
-
 # Archives and scratch logs (the folders they come from are tracked)
 *.zip
 run1.txt
